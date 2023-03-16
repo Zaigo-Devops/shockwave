@@ -11,7 +11,6 @@ stripe.api_key = STRIPE_SECRET_KEY
 @api_view(['POST'])
 def create_customer(request):
     if request.method == 'POST':
-
         # customer = create_payment_customer('abd', "add@gmail.com")
         # address = create_address("123 Main St", "Apartment 5", "San Francisco", "CA", "94111", "US")
         # payment_method = create_payment_method("card", "4242424242424242", 12, 2024, "314", 'abd', "add@gmail.com", address)
@@ -19,11 +18,10 @@ def create_customer(request):
         # product = create_product("Shock Wave", "Shock Wave description")
         # price = create_price(1000,"usd","month",product.id)
         # subscription = create_subscription(customer.id,price.id) 
-        
-        delete_subscription("sub_1Mlus5SJEQdByQx0cVj9uBcy")
-        
-        return Response({'message': 'Customer created successfully', })
 
+        delete_subscription("sub_1Mlus5SJEQdByQx0cVj9uBcy")
+
+        return Response({'message': 'Customer created successfully', })
 
 
 def create_payment_customer(name, email, phone=None):
@@ -76,30 +74,32 @@ def attach_payment_method(customer_id, payment_method_id):
     )
     return attach_payment
 
-def create_product(product_name,description):
-    product  = stripe.Product.create(name=product_name, description=description)
+
+def create_product(product_name, description):
+    product = stripe.Product.create(name=product_name, description=description)
     return product
 
-def create_price(amount, currency,intervell,product_id):
+
+def create_price(amount, currency, interval, product_id):
     price = stripe.Price.create(
         unit_amount=amount,
         currency=currency,
-        recurring={"interval": intervell},
+        recurring={"interval": interval},
         product=product_id,
     )
     return price
 
 
-def create_subscription(customer_id, price_id):  
+def create_subscription(customer_id, price_id):
     subscription = stripe.Subscription.create(
-    customer=customer_id,
-    items=[
-        {
-            "price": price_id,
-        },
-    ],
-    payment_behavior="default_incomplete",
-    # expand=["latest_invoice.payment_intent"],
+        customer=customer_id,
+        items=[
+            {
+                "price": price_id,
+            },
+        ],
+        payment_behavior="default_incomplete",
+        # expand=["latest_invoice.payment_intent"],
     )
     return subscription
 

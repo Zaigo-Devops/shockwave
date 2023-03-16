@@ -24,7 +24,8 @@ admin.site.index_title = 'Welcome to Shock Wave Portal'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('sw_api_app.urls'))
+    # path('', include('sw_admin_app.urls')),
+    path('api/', include('sw_api_app.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)  # added inorder to store mediafiles

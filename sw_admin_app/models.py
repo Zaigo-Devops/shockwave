@@ -39,12 +39,13 @@ class Session(models.Model):
     pin_code = models.CharField(max_length=256, blank=True, null=True, default=None)
     latitude = models.CharField(max_length=256, blank=True, null=True, default=None)
     longitude = models.CharField(max_length=256, blank=True, null=True, default=None)
+    device_name = models.CharField(max_length=256, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
 class SessionData(models.Model):
-    energy_data = models.JSONField()
+    energy_data = models.JSONField(default=None, null=True)
     session_id = models.ForeignKey(Session, on_delete=models.SET_NULL, null=True)
     device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True)
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -67,6 +68,8 @@ class Subscription(models.Model):
     device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True)
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     payment_method_id = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True)
+    stripe_payment_id = models.CharField(max_length=256)
+    stripe_customer_id = models.CharField(max_length=256)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

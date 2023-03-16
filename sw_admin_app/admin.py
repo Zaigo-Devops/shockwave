@@ -1,13 +1,5 @@
 from django.contrib import admin, messages
-from django.shortcuts import render
-# from django.contrib.flatpages.models import FlatPage
 from sw_admin_app.models import Device, Subscription, PaymentMethod
-
-
-# Register your models here.
-# class MyFlatPage(FlatPage):
-#     class Meta:
-#         verbose_name = 'Static Page'
 
 
 class DeviceAdmin(admin.ModelAdmin):
@@ -28,13 +20,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         print(obj.user_id)
         return
 
-    # def queryset(self, request):
-    #     qs = super().queryset(request)
-    #     return qs.filter(author=request
-
 
 admin.site.register(Device, DeviceAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(PaymentMethod)
-# admin.site.unregister(FlatPage)
-# admin.site.register(MyFlatPage, admin.ModelAdmin)

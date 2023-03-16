@@ -21,6 +21,7 @@ class BillingAddress(models.Model):
 class Device(models.Model):
     device_unique_id = models.CharField(max_length=256)
     device_name = models.CharField(max_length=256, blank=True, null=True, default=None)
+    device_price_id = models.CharField(max_length=256, blank=True, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

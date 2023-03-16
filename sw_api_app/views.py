@@ -1,6 +1,5 @@
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .serilaizer import BillingAddressSerializer
 from .utils import get_member_id
 from django.contrib.auth import authenticate
 from requests import Response
@@ -15,8 +14,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 
 # Class based view to Get User Details using Token Authentication
-class BillingAddressView(models.Model):
-    serializer_class = BillingAddressSerializer
 
 
 class UserDetailAPI(APIView):

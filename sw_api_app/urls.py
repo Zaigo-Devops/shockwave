@@ -3,10 +3,9 @@ from django.urls import path, include
 from rest_framework import routers
 
 from sw_api_app import views
-from sw_api_app.views import BillingAddressView, UserDetailAPI, LoginView, RegisterUserAPIView
+from sw_api_app.views import  UserDetailAPI, LoginView, RegisterUserAPIView
 
 router = routers.DefaultRouter()
-router.register('billing', viewset=BillingAddressView)
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -1,42 +1,49 @@
 from django.contrib.auth.models import User
-from rest_framework import serializers, status
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
+from django.contrib.auth.password_validation import validate_password
 
 
 class UserSerializer(serializers.ModelSerializer):
-    tokens = serializers.SerializerMethodField()
+    password = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'password', 'first_name', 'last_name', 'tokens']
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ['id', 'email', 'first_name', 'last_name']
 
-    def get_tokens(self, obj):
-        tokens = RefreshToken.for_user(obj)
-        return {
-            'access': str(tokens.access_token),
-            'refresh': str(tokens),
+
+# Serializer to Register User
+class RegisterSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all())]
+    )
+    password = serializers.CharField(
+        write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = ('email', 'password', 'password2',
+                  'first_name', 'last_name')
+        extra_kwargs = {
+            'first_name': {'required': True},
+            'last_name': {'required': True}
         }
 
-    def create(self, validated_data):
-        user = User.objects.create_user(
-            validated_data['email'],
-            validated_data['password'],
-            validated_data['first_name'],
-            validated_data['last_name'],
-        )
-        return user
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError(
+                {"password": "Password fields didn't match."})
+        return attrs
 
-    # def post(self, request):
-    #     req_data = request.data
-    #     email_id = req_data.get('email')
-    #     password = req_data.get('password')
-    #     first_name = req_data.get('first_name')
-    #     last_name = req_data.get('last_name')
-    #     obj = User.objects.filter(email=email_id).count()
-    #     print('obj', obj)
-    #     if obj == 0:
-    #         user = User.objects.create(email=email_id, password=password, first_name=first_name, last_name=last_name)
-    #         return user
-    #     else:
-    #         print('invalid')
+    def create(self, validated_data):
+        user = User.objects.create(
+            email=validated_data['email'],
+            username=validated_data['email'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name']
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user

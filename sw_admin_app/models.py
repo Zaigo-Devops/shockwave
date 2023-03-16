@@ -63,7 +63,7 @@ class PaymentMethod(models.Model):
 
 
 class Subscription(models.Model):
-    status = models.IntegerField(default=0)
+    status = models.PositiveIntegerField(choices=((0, "InActive"), (1, "Active"), (2, "Cancelled")), default=0)
     device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True)
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     payment_method_id = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True)

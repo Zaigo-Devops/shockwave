@@ -15,8 +15,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+
+admin.site.site_header = 'SHOCK WAVE ADMIN'
+admin.site.site_title = 'Shock Wave site'
+admin.site.index_title = 'Welcome to Shock Wave Portal'
 
 urlpatterns = [
-    path('', admin.site.urls),
-    path('api/v1', include('sw_api_app.urls'))
+    path('admin/', admin.site.urls),
+    path('api/', include('sw_api_app.urls'))
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)  # added inorder to store mediafiles
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

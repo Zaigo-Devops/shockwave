@@ -3,6 +3,8 @@ from django.urls import path, include
 from .views import *
 
 router = routers.DefaultRouter()
+router.register('billingaddress', viewset=BillingAddressViewSet)
+
 urlpatterns = [
     path('', include(router.urls)),
     path("get-details", UserDetailAPI.as_view()),

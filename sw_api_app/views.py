@@ -1,15 +1,16 @@
 from django.contrib.auth import authenticate
 from requests import Response
 from rest_framework.views import APIView
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
 from django.utils import timezone
 from sw_admin_app.models import *
 from sw_admin_app.utils import generate_otp
-from sw_api_app.serializers import UserSerializer, RegisterSerializer
+from sw_api_app.serializers import UserSerializer, RegisterSerializer, BillingAddressSerializer
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+
 from sw_api_app.utlis import Send_Mail_Notification
 
 
@@ -111,7 +112,8 @@ class TriggerOtp(APIView):
                 user_otp = UserOtp(user_id=user, otp=otp)
                 user_otp.save()
                 Send_Mail_Notification(otp, user).start()
-                return Response({"status": "success", "message": "OTP has been triggered Successfully"}, status=status.HTTP_200_OK)
+                return Response({"status": "success", "message": "OTP has been triggered Successfully"},
+                                status=status.HTTP_200_OK)
             else:
                 return Response({"error": "Email does not exists"}, status=status.HTTP_400_BAD_REQUEST)
         else:
@@ -155,3 +157,8 @@ class OtpVerified(APIView):
             print(str(e))
             return Response({'error': 'Please provide valid email information', "msg": str(e)},
                             status.HTTP_400_BAD_REQUEST)
+
+
+class BillingAddressViewSet(viewsets.ModelViewSet):
+    serializer_class = BillingAddressSerializer
+    queryset = BillingAddress.objects.all()

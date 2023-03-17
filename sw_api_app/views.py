@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from requests import Response
+from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
@@ -162,3 +163,19 @@ class OtpVerified(APIView):
 class BillingAddressViewSet(viewsets.ModelViewSet):
     serializer_class = BillingAddressSerializer
     queryset = BillingAddress.objects.all()
+
+
+@api_view(['POST'])
+def session_setup(request):
+    if request.method == 'POST':
+        data = request.data
+        environment = data.get('environment', None)
+        location = data.get('location', None)
+        device_id = data.get('device_id', None)
+        user_id = data.get('user_id', None)
+        if environment and location and device_id:
+            device = Device.objects.filter(pk=device_id).first()
+            user = User.objects.filter(pk=user_id).first()
+            session_create = Session.objects.create(environment=environment, device_id=device, user_id=user,
+                                                    location=location)
+            return Response('Session Created Successfully', status=status.HTTP_200_OK)

@@ -1,5 +1,7 @@
 from rest_framework import routers
 from django.urls import path, include
+
+from . import views
 from .views import *
 
 router = routers.DefaultRouter()
@@ -11,5 +13,6 @@ urlpatterns = [
     path('register/', RegisterUserAPIView.as_view()),
     path('login/', LoginView.as_view(), name='login_api'),
     path('trigger_otp/', TriggerOtp.as_view()),
-    path('Verify_otp/', OtpVerified.as_view())
+    path('Verify_otp/', OtpVerified.as_view()),
+    path('session_setup/', views.session_setup)
 ]

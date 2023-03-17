@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from sw_admin_app.utils import get_expire_time
+
 
 # Create your models here.
 class BillingAddress(models.Model):
@@ -62,3 +64,11 @@ class Subscription(models.Model):
     payment_method_id = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class UserOtp(models.Model):
+    user_id = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, blank=True)
+    otp = models.CharField(max_length=6, default=None)
+    is_validated = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now=True)
+    expired_at = models.DateTimeField(default=get_expire_time)

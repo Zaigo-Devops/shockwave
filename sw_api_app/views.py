@@ -1,13 +1,16 @@
 from django.contrib.auth import authenticate
 from requests import Response
 from rest_framework.views import APIView
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.response import Response
+from django.utils import timezone
 from sw_admin_app.models import *
+from sw_admin_app.utils import generate_otp
 from sw_api_app.serializers import UserSerializer, RegisterSerializer
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+from sw_api_app.utlis import Send_Mail_Notification
 
 
 # Class based view to Get User Details using Token Authentication
@@ -96,3 +99,59 @@ class LoginView(APIView):
         else:
             content = {'message': 'Invalid User Information Provided'}
             return Response(content)
+
+
+class TriggerOtp(APIView):
+    def post(self, request):
+        email = request.data.get('email', None)
+        if email:
+            user = User.objects.get(email=email)
+            if user:
+                otp = generate_otp()
+                user_otp = UserOtp(user_id=user, otp=otp)
+                user_otp.save()
+                Send_Mail_Notification(otp, user).start()
+                return Response({"status": "success", "message": "OTP has been triggered Successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Email does not exists"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"error": "Please provide valid Email"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OtpVerified(APIView):
+    def post(self, request):
+        email = request.data.get('email', None)
+        otp = request.data.get('otp', None)
+        password = request.data.get('password', None)
+        conform_password = request.data.get('conform_password', None)
+        now = timezone.now()
+        try:
+            user = User.objects.filter(email=email).get()
+            if user.email == email:
+                user_otp = user.userotp_set.order_by('-created_at').first()
+                if user_otp.otp == otp:
+                    if user_otp.created_at <= now <= user_otp.expired_at:
+                        user_otp.__dict__.update({'is_validated': True})
+                        user_otp.save()
+                        if password == conform_password:
+                            user.set_password(password)
+                            user.save()
+                            return Response({"status": "success", "message": "Otp has been Verified and Created "
+                                                                             "Password"
+                                                                             "Successfully"},
+                                            status=status.HTTP_200_OK)
+                        else:
+                            return Response({"error": "Password fields didn't match."})
+                    else:
+                        return Response({"error": 'Otp is expired'}, status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+                else:
+                    return Response({'error': 'Otp is Invalid, please provide valid otp'},
+                                    status.HTTP_422_UNPROCESSABLE_ENTITY)
+            else:
+                return Response({'error': 'Email does not exists, please provide valid email'},
+                                status.HTTP_422_UNPROCESSABLE_ENTITY)
+        except Exception as e:
+            print(str(e))
+            return Response({'error': 'Please provide valid email information', "msg": str(e)},
+                            status.HTTP_400_BAD_REQUEST)

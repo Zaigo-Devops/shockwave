@@ -7,5 +7,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path("get-details", UserDetailAPI.as_view()),
     path('register/', RegisterUserAPIView.as_view()),
-    path('login/', LoginView.as_view(), name='login_api')
+    path('login/', LoginView.as_view(), name='login_api'),
+    path('trigger_otp/', TriggerOtp.as_view()),
+    path('Verify_otp/', OtpVerified.as_view())
 ]

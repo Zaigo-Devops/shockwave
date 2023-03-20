@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from sw_admin_app.utils import get_expire_time
+
 
 # Create your models here.
 
@@ -80,4 +82,10 @@ class Subscription(models.Model):
 
     class Meta:
         verbose_name = "subscription"
-        # verbose_name_plural = "My Models"
+
+class UserOtp(models.Model):
+    user_id = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, blank=True)
+    otp = models.CharField(max_length=6, default=None)
+    is_validated = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now=True)
+    expired_at = models.DateTimeField(default=get_expire_time)

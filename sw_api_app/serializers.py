@@ -1,7 +1,8 @@
-from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
+
+from sw_admin_app.models import *
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -47,3 +48,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+
+
+class BillingAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BillingAddress
+        fields = "__all__"

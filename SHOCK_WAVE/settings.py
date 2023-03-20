@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'django_filters',
-    'corsheaders'
+    'corsheaders',
+    'django_rest_passwordreset'
 ]
 
 MIDDLEWARE = [
@@ -137,6 +138,12 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=30),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=356),
 }
+
+EMAIL_HOST = str(os.getenv('EMAIL_HOST'))
+EMAIL_USE_TLS = str(os.getenv('EMAIL_USE_TLS'))
+EMAIL_PORT = str(os.getenv('EMAIL_PORT'))
+EMAIL_HOST_USER = str(os.getenv('EMAIL_HOST_USER'))
+EMAIL_HOST_PASSWORD = str(os.getenv('EMAIL_HOST_PASSWORD'))
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

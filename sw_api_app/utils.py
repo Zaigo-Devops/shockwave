@@ -14,7 +14,7 @@ def get_member_id(request):
     return None
 
 
-class Send_Mail_Notification(threading.Thread):
+class SendMailNotification(threading.Thread):
     def __init__(self, otp, user):
         self.otp = otp
         self.user = user

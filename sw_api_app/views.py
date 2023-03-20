@@ -193,10 +193,18 @@ def session_setup(request):
         location = data.get('location', None)
         device_id = data.get('device_id', None)
         user_id = data.get('user_id', None)
-        if environment and location and device_id:
+        city = data.get('city', None)
+        state = data.get('state', None)
+        country = data.get('country', None)
+        pin_code = data.get('pin_code', None)
+        latitude = data.get('latitude', None)
+        longitude = data.get('longitude', None)
+        if environment and location and device_id and user_id:
             device = Device.objects.filter(pk=device_id).first()
             user = User.objects.filter(pk=user_id).first()
             session_create = Session.objects.create(environment=environment, device_id=device, user_id=user,
-                                                    location=location)
-            return Response('Session Created Successfully', status=status.HTTP_200_OK)
-
+                                                    location=location, city=city, state=state, country=country,
+                                                    pin_code=pin_code, latitude=latitude, longitude=longitude)
+            return Response({'message': 'Session Created Successfully'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': 'Please provide valid data information'}, status=status.HTTP_400_BAD_REQUEST)

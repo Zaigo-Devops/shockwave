@@ -12,7 +12,7 @@ from sw_api_app.serializers import *
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from sw_api_app.utils import Send_Mail_Notification
+from sw_api_app.utils import SendMailNotification
 
 
 # Class based view to Get User Details using Token Authentication
@@ -129,7 +129,7 @@ class TriggerOtp(APIView):
                 otp = generate_otp()
                 user_otp = UserOtp(user_id=user, otp=otp)
                 user_otp.save()
-                Send_Mail_Notification(otp, user).start()
+                SendMailNotification(otp, user).start()
                 return Response({"status": "success", "message": "OTP has been triggered Successfully"},
                                 status=status.HTTP_200_OK)
             else:

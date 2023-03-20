@@ -1,5 +1,3 @@
-from rest_framework.decorators import api_view
-from rest_framework import status
 from .utils import get_member_id
 from django.contrib.auth import authenticate
 from requests import Response
@@ -10,12 +8,11 @@ from rest_framework.response import Response
 from django.utils import timezone
 from sw_admin_app.models import *
 from sw_admin_app.utils import generate_otp
-from sw_api_app.serializers import UserSerializer, RegisterSerializer, BillingAddressSerializer
+from sw_api_app.serializers import *
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-
-from sw_api_app.utlis import Send_Mail_Notification
+from sw_api_app.utils import Send_Mail_Notification
 
 
 # Class based view to Get User Details using Token Authentication

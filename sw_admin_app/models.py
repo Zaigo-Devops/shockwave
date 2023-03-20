@@ -69,11 +69,15 @@ class Subscription(models.Model):
     device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True)
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     payment_method_id = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True)
-    stripe_payment_id = models.CharField(max_length=256, default=None)
-    stripe_customer_id = models.CharField(max_length=256, default=None)
+    stripe_payment_id = models.CharField(max_length=256, blank=True, null=True, default=None)
+    stripe_customer_id = models.CharField(max_length=256, blank=True, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         payments = self.payment_method_id.payment_id
         return payments
+
+    class Meta:
+        verbose_name = "subscription"
+        # verbose_name_plural = "My Models"

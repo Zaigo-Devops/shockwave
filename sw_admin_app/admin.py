@@ -1,4 +1,7 @@
 from django.contrib import admin, messages
+from django.contrib.admin.actions import delete_selected
+from django.shortcuts import render
+
 from sw_admin_app.models import Device, Subscription, PaymentMethod
 from sw_api_app.stripe import create_product, create_price
 
@@ -19,17 +22,37 @@ class DeviceAdmin(admin.ModelAdmin):
 
 
 class SubscriptionAdmin(admin.ModelAdmin):
+    # delete_confirmation_template = "admin/custom_base.html"
     model = Subscription
-    list_display = ('device_id', 'user_id', 'payment_method_id', 'status', 'created_at', 'updated_at')
-    readonly_fields = ('device_id', 'user_id', 'payment_method_id', 'status')
+    fields = ('device_id', 'user_id', 'payment_method_id', 'status')
+    list_display = (
+        'device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id', 'created_at',
+        'updated_at')
+
+    readonly_fields = ('device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id')
+
+    def delete_selected(self, request, queryset):
+        queryset.delete()
+        delete_selected.short_description = "New Button Label"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
     def message_user(self, request, message, level=messages.INFO, extra_tags='', fail_silently=False):
-        message = 'Subscriptions Cannot be Deleted !!!'
+        message = 'Selected Subscription is cancelled !!!'
         messages.add_message(request, level, message)
 
+    def save_model(self, request, obj, form, change):
+        return False
+
     def delete_model(self, request, obj):
-        print(obj.user_id)
-        return
+        # super().delete_model(request, obj)
+        if obj:
+            obj.status = 0
+            obj.save()
 
 
 admin.site.register(Device, DeviceAdmin)

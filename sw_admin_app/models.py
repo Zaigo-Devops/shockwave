@@ -83,6 +83,7 @@ class Subscription(models.Model):
     class Meta:
         verbose_name = "subscription"
 
+
 class UserOtp(models.Model):
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, blank=True)
     otp = models.CharField(max_length=6, default=None)

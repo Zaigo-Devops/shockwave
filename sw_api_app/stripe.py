@@ -11,13 +11,12 @@ stripe.api_key = STRIPE_SECRET_KEY
 @api_view(['POST'])
 def create_customer(request):
     if request.method == 'POST':
-        # customer = create_payment_customer('abd', "add@gmail.com")
-        # address = create_address("123 Main St", "Apartment 5", "San Francisco", "CA", "94111", "US")
-        # payment_method = create_payment_method("card", "4242424242424242", 12, 2024, "314", 'abd', "add@gmail.com", address)
-        # attach_payment = attach_payment_method(customer.id, payment_method.id)
-        # product = create_product("Shock Wave", "Shock Wave description")
-        # price = create_price(1000,"usd","month",product.id)
-        # subscription = create_subscription(customer.id,price.id) 
+        # customer = create_payment_customer('abd', "add@gmail.com") address = create_address("123 Main St",
+        # "Apartment 5", "San Francisco", "CA", "94111", "US") payment_method = create_payment_method("card",
+        # "4242424242424242", 12, 2024, "314", 'abd', "add@gmail.com", address) attach_payment =
+        # attach_payment_method(customer.id, payment_method.id) product = create_product("Shock Wave", "Shock Wave
+        # description") price = create_price(1000,"usd","month",product.id) subscription = create_subscription(
+        # customer.id,price.id)
 
         delete_subscription("sub_1Mlus5SJEQdByQx0cVj9uBcy")
 
@@ -33,7 +32,7 @@ def create_payment_customer(name, email, phone=None):
     return customer
 
 
-def retrive_payment_customer(customer_id):
+def retrieve_payment_customer(customer_id):
     return stripe.Customer.retrieve(customer_id)
 
 

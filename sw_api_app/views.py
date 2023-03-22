@@ -1,3 +1,4 @@
+from .stripe import delete_subscription
 from .utils import get_member_id
 from django.contrib.auth import authenticate
 from requests import Response
@@ -205,3 +206,14 @@ def session_setup(request):
             return Response({'message': 'Session Created Successfully'}, status=status.HTTP_200_OK)
         else:
             return Response({'message': 'Please provide valid data information'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def cancel_registration(request):
+    subscription_id = request.data.get('subscription_id', '')
+    if subscription_id:
+        delete_subscription(subscription_id)
+        Subscription.objects.filter(id=subscription_id).update(status=0)
+        return Response('Subscription Cancelled !!!', status=status.HTTP_200_OK)
+    else:
+        return Response('Invalid Subscription ID', status=status.HTTP_404_NOT_FOUND)

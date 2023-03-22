@@ -213,25 +213,39 @@ class BillingAddressViewSet(viewsets.ModelViewSet):
 def session_setup(request):
     if request.method == 'POST':
         data = request.data
+        user_id = get_member_id(request)
         environment = data.get('environment', None)
         location = data.get('location', None)
-        device_id = data.get('device_id', None)
-        user_id = data.get('user_id', None)
+        device_serial_no = data.get('device_serial_no', None)
         city = data.get('city', None)
         state = data.get('state', None)
         country = data.get('country', None)
         pin_code = data.get('pin_code', None)
         latitude = data.get('latitude', None)
         longitude = data.get('longitude', None)
-        if environment and location and device_id and user_id:
-            device = Device.objects.filter(pk=device_id).first()
-            user = User.objects.filter(pk=user_id).first()
-            session_create = Session.objects.create(environment=environment, device_id=device, user_id=user,
-                                                    location=location, city=city, state=state, country=country,
-                                                    pin_code=pin_code, latitude=latitude, longitude=longitude)
-            return Response({'message': 'Session Created Successfully'}, status=status.HTTP_200_OK)
-        else:
-            return Response({'message': 'Please provide valid data information'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if device_serial_no:
+                is_device = Device.objects.get(device_serial_no=device_serial_no)
+                if is_device:
+                    is_subscribed = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, status=1)
+                    if is_subscribed:
+                        if environment and location and is_device and user_id:
+                            user = User.objects.filter(pk=user_id).first()
+                            session_create = Session.objects.create(environment=environment, device_id=is_device,
+                                                                    user_id=user, location=location, city=city,
+                                                                    state=state, country=country,
+                                                                    pin_code=pin_code, latitude=latitude,
+                                                                    longitude=longitude)
+                            return Response({'message': 'Session Created Successfully'}, status=status.HTTP_200_OK)
+                        else:
+                            return Response({'message': 'Please provide valid data information'},
+                                            status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return Response({"message": "No Subscription is Active for this device, Please do payment for "
+                                                    "further process "}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"message": "Failed, to setup the session", "reason": str(e)},
+                            status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])

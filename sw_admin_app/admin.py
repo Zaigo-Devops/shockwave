@@ -8,8 +8,8 @@ from sw_api_app.stripe import create_product, create_price
 
 class DeviceAdmin(admin.ModelAdmin):
     model = Device
-    fields = ('device_name', 'device_unique_id',)
-    list_display = ('device_name', 'device_unique_id',)
+    fields = ('device_name', 'device_serial_no',)
+    list_display = ('device_name', 'device_serial_no',)
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)

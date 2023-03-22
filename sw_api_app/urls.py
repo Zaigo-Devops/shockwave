@@ -12,8 +12,10 @@ urlpatterns = [
     path("get-details", UserDetailAPI.as_view()),
     path('register/', RegisterUserAPIView.as_view()),
     path('login/', LoginView.as_view(), name='login_api'),
-    path('device_registration/', views.device_registration),
+    path('is_device_registration/', views.is_device_registration),
     path('trigger_otp/', TriggerOtp.as_view()),
     path('Verify_otp/', OtpVerified.as_view()),
-    path('session_setup/', views.session_setup)
+    path('session_setup/', views.session_setup),
+    path('session_data_save/<int:session_id>/', views.session_data_save),
+    path('session_list/<int:device_id>/', views.session_list)
 ]

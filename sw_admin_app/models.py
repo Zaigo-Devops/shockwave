@@ -21,7 +21,7 @@ class BillingAddress(models.Model):
 
 
 class Device(models.Model):
-    device_unique_id = models.CharField(max_length=256)
+    device_serial_no = models.CharField(max_length=256)
     device_name = models.CharField(max_length=256, blank=True, null=True, default=None)
     device_price_id = models.CharField(max_length=256, blank=True, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -73,6 +73,8 @@ class Subscription(models.Model):
     payment_method_id = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True)
     stripe_payment_id = models.CharField(max_length=256, blank=True, null=True, default=None)
     stripe_customer_id = models.CharField(max_length=256, blank=True, null=True, default=None)
+    start_date = models.DateField()
+    end_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

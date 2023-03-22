@@ -2,7 +2,7 @@ from .stripe import delete_subscription
 from .utils import get_member_id
 from django.contrib.auth import authenticate
 from requests import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
@@ -14,6 +14,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from sw_api_app.utils import SendMailNotification
+from rest_framework.permissions import IsAuthenticated
 
 
 # Class based view to Get User Details using Token Authentication
@@ -52,12 +53,12 @@ class RegisterUserAPIView(generics.CreateAPIView):
         if len(user.last_name) > 0:
             user_name = user.first_name + ' ' + user.last_name
         token_items = {
-            'id': user.pk,
+            'user_id': user.pk,
             'name': user_name,
             'email_id': user.email
         }
         for item in token_items:
-            if item != "id":
+            if item != "user_id":
                 RefreshToken.__setitem__(token, item, token_items[item])
         token_items['access_token'] = str(token.access_token)
         token_items['refresh_token'] = str(token)
@@ -86,12 +87,12 @@ class LoginView(APIView):
             session_count = user.session_set.count()
 
             token_items = {
-                'id': user.pk,
+                'user_id': user.pk,
                 'name': user_name,
                 'email_id': user.email
             }
             for item in token_items:
-                if item != "id":
+                if item != "user_id":
                     RefreshToken.__setitem__(token, item, token_items[item])
             token_items['access_token'] = str(token.access_token)
             token_items['refresh_token'] = str(token)
@@ -107,16 +108,18 @@ class LoginView(APIView):
 
 
 @api_view(['POST'])
-def device_registration(request):
+@permission_classes([IsAuthenticated])
+def is_device_registration(request):
     if request.method == 'POST':
         try:
-            device_id = request.data.get('device_id', '')
+            device_id = request.data.get('device_id', None)
             user_id = get_member_id(request)
             subscription = Subscription.objects.get(user_id=user_id, device_id=device_id)
-            if subscription.status == 1:
-                return Response(True, status=status.HTTP_200_OK)
-            else:
-                return Response(False, status=status.HTTP_404_NOT_FOUND)
+            if subscription:
+                if subscription.status == 1:
+                    return Response({"is subscribed": True}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"is subscribed": False}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             print('Error Detail', str(e))
 
@@ -125,15 +128,16 @@ class TriggerOtp(APIView):
     def post(self, request):
         email = request.data.get('email', None)
         if email:
-            user = User.objects.get(email=email)
-            if user:
-                otp = generate_otp()
-                user_otp = UserOtp(user_id=user, otp=otp)
-                user_otp.save()
-                SendMailNotification(otp, user).start()
-                return Response({"status": "success", "message": "OTP has been triggered Successfully"},
-                                status=status.HTTP_200_OK)
-            else:
+            try:
+                user = User.objects.get(email=email)
+                if user:
+                    otp = generate_otp()
+                    user_otp = UserOtp(user_id=user, otp=otp)
+                    user_otp.save()
+                    SendMailNotification(otp, user).start()
+                    return Response({"status": "success", "message": "OTP has been triggered Successfully"},
+                                    status=status.HTTP_200_OK)
+            except:
                 return Response({"error": "Email does not exists"}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": "Please provide valid Email"}, status=status.HTTP_400_BAD_REQUEST)
@@ -157,10 +161,32 @@ class OtpVerified(APIView):
                         if password == conform_password:
                             user.set_password(password)
                             user.save()
-                            return Response({"status": "success", "message": "Otp has been Verified and Created "
-                                                                             "Password"
-                                                                             "Successfully"},
-                                            status=status.HTTP_200_OK)
+                            token = RefreshToken.for_user(user)  # generate token without username & password
+                            user_name = user.first_name
+                            if len(user.last_name) > 0:
+                                user_name = user.first_name + ' ' + user.last_name
+                            payment_method = user.subscription_set.filter(status=1).count()
+                            payment_method_added = False
+                            if payment_method > 0:
+                                payment_method_added = True
+                            session_count = user.session_set.count()
+
+                            token_items = {
+                                'user_id': user.pk,
+                                'name': user_name,
+                                'email_id': user.email
+                            }
+                            for item in token_items:
+                                if item != "user_id":
+                                    RefreshToken.__setitem__(token, item, token_items[item])
+                            token_items['access_token'] = str(token.access_token)
+                            token_items['refresh_token'] = str(token)
+                            token_items['device_count'] = payment_method
+                            token_items['payment_method_added'] = payment_method_added
+                            token_items['payment_method_count'] = payment_method
+                            token_items['session_count'] = session_count
+                            response = token_items
+                            return Response(response)
                         else:
                             return Response({"error": "Password fields didn't match."})
                     else:
@@ -184,28 +210,43 @@ class BillingAddressViewSet(viewsets.ModelViewSet):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def session_setup(request):
     if request.method == 'POST':
         data = request.data
+        user_id = get_member_id(request)
         environment = data.get('environment', None)
         location = data.get('location', None)
-        device_id = data.get('device_id', None)
-        user_id = data.get('user_id', None)
+        device_serial_no = data.get('device_serial_no', None)
         city = data.get('city', None)
         state = data.get('state', None)
         country = data.get('country', None)
         pin_code = data.get('pin_code', None)
         latitude = data.get('latitude', None)
         longitude = data.get('longitude', None)
-        if environment and location and device_id and user_id:
-            device = Device.objects.filter(pk=device_id).first()
-            user = User.objects.filter(pk=user_id).first()
-            session_create = Session.objects.create(environment=environment, device_id=device, user_id=user,
-                                                    location=location, city=city, state=state, country=country,
-                                                    pin_code=pin_code, latitude=latitude, longitude=longitude)
-            return Response({'message': 'Session Created Successfully'}, status=status.HTTP_200_OK)
-        else:
-            return Response({'message': 'Please provide valid data information'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if device_serial_no:
+                is_device = Device.objects.get(device_serial_no=device_serial_no)
+                if is_device:
+                    is_subscribed = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, status=1)
+                    if is_subscribed:
+                        if environment and location and is_device and user_id:
+                            user = User.objects.filter(pk=user_id).first()
+                            session_create = Session.objects.create(environment=environment, device_id=is_device,
+                                                                    user_id=user, location=location, city=city,
+                                                                    state=state, country=country,
+                                                                    pin_code=pin_code, latitude=latitude,
+                                                                    longitude=longitude)
+                            return Response({'message': 'Session Created Successfully'}, status=status.HTTP_200_OK)
+                        else:
+                            return Response({'message': 'Please provide valid data information'},
+                                            status=status.HTTP_400_BAD_REQUEST)
+                    else:
+                        return Response({"message": "No Subscription is Active for this device, Please do payment for "
+                                                    "further process "}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"message": "Failed, to setup the session", "reason": str(e)},
+                            status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -217,3 +258,42 @@ def cancel_registration(request):
         return Response('Subscription Cancelled !!!', status=status.HTTP_200_OK)
     else:
         return Response('Invalid Subscription ID', status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def session_data_save(request, session_id):
+    data = request.data
+    session_data = data.get('session_data', None)
+    device_serial_no = data.get('device_serial_no', None)
+    user_id = get_member_id(request)
+    if session_id and session_data and device_serial_no and user_id:
+        device = Device.objects.filter(device_serial_no=device_serial_no).first()
+        user = User.objects.filter(pk=user_id).first()
+        session = Session.objects.filter(pk=session_id).first()
+        session_data = SessionData.objects.create(energy_data=session_data, session_id=session, device_id=device,
+                                                  user_id=user)
+        return Response({'message': "Session Data Save Successfully"}, status=status.HTTP_200_OK)
+    else:
+        return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def session_list(request, device_id):
+    user_id = get_member_id(request)
+    location = request.GET.get('location', None)
+    start_date = request.GET.get('start_date', None)
+    end_date = request.GET.get('end_date', None)
+    if start_date and not end_date:
+        return Response("please provide End_date")
+    if not start_date and end_date:
+        return Response("please provide Start_date")
+    session = Session.objects.filter(device_id=device_id, user_id=user_id)
+    if start_date and end_date:
+        session = session.filter(created_at__range=(start_date, end_date))
+    if location:
+        session = session.filter(location__icontains=location)
+
+    return Response(session.values())
+

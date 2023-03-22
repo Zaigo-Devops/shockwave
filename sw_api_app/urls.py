@@ -15,5 +15,6 @@ urlpatterns = [
     path('device_registration/', views.device_registration),
     path('trigger_otp/', TriggerOtp.as_view()),
     path('Verify_otp/', OtpVerified.as_view()),
-    path('session_setup/', views.session_setup)
+    path('session_setup/', views.session_setup),
+    path('swipe_to_cancel/', views.cancel_registration)
 ]

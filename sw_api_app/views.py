@@ -1,3 +1,4 @@
+from .stripe import delete_subscription
 from .utils import get_member_id
 from django.contrib.auth import authenticate
 from requests import Response
@@ -14,7 +15,6 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from sw_api_app.utils import SendMailNotification
 from rest_framework.permissions import IsAuthenticated
-
 
 # Class based view to Get User Details using Token Authentication
 
@@ -284,3 +284,15 @@ def session_list(request, device_id):
         session = session.filter(location__icontains=location)
 
     return Response(session.values())
+
+
+@api_view(['POST'])
+def cancel_registration(request):
+    subscription_id = request.data.get('subscription_id', '')
+    if subscription_id:
+        delete_subscription(subscription_id)
+        Subscription.objects.filter(id=subscription_id).update(status=0)
+        return Response('Subscription Cancelled !!!', status=status.HTTP_200_OK)
+    else:
+        return Response('Invalid Subscription ID', status=status.HTTP_404_NOT_FOUND)
+

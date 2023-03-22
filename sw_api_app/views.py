@@ -253,10 +253,10 @@ def session_setup(request):
 def session_data_save(request, session_id):
     data = request.data
     session_data = data.get('session_data', None)
-    device_id = data.get('device_id', None)
-    user_id = data.get('user_id', None)
-    if session_id and session_data and device_id and user_id:
-        device = Device.objects.filter(pk=device_id).first()
+    device_serial_no = data.get('device_serial_no', None)
+    user_id = get_member_id(request)
+    if session_id and session_data and device_serial_no and user_id:
+        device = Device.objects.filter(device_serial_no=device_serial_no).first()
         user = User.objects.filter(pk=user_id).first()
         session = Session.objects.filter(pk=session_id).first()
         session_data = SessionData.objects.create(energy_data=session_data, session_id=session, device_id=device,

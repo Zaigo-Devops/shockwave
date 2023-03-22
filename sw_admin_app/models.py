@@ -73,6 +73,8 @@ class Subscription(models.Model):
     payment_method_id = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True)
     stripe_payment_id = models.CharField(max_length=256, blank=True, null=True, default=None)
     stripe_customer_id = models.CharField(max_length=256, blank=True, null=True, default=None)
+    start_date = models.DateField()
+    end_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

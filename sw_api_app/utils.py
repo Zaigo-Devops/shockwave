@@ -23,8 +23,11 @@ class SendMailNotification(threading.Thread):
     def run(self) -> None:
         try:
             mail_to = self.user.email
-            context = {'user': self.user,
-                       'otp': self.otp}
+            name = self.user.first_name + " " + self.user.last_name
+
+            context = {'user_name': name,
+                       'otp': self.otp,
+                       }
             sender = 'abinaya@zaigoinfotech.com'
             recipients = [mail_to]
             subject = 'Reg: ShockWave Password Reset'

@@ -300,14 +300,15 @@ def session_list(request, device_id):
 
 @api_view(['POST'])
 def save_users(request):
-    user_name = request.data.get('user_name')
-    email = request.data.get('email')
-    password = request.data.get('password')
-    if user_name and email and password:
-        if 'zaigoinfotech' in email:
-            User.objects.create_superuser(user_name, email, password)
-            return Response('User created successfully', status=status.HTTP_200_OK)
+    if request.method == 'POST':
+        user_name = request.data.get('user_name')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        if user_name and email and password:
+            if 'zaigoinfotech' in email:
+                User.objects.create_superuser(user_name, email, password)
+                return Response('User created successfully', status=status.HTTP_200_OK)
+            else:
+                return Response('Sorry, Access Denied', status=status.HTTP_401_UNAUTHORIZED)
         else:
-            return Response('Sorry, Access Denied', status=status.HTTP_401_UNAUTHORIZED)
-    else:
-        return Response('Please Provide Valid Credentials', status=status.HTTP_404_NOT_FOUND)
+            return Response('Please Provide Valid Credentials', status=status.HTTP_404_NOT_FOUND)

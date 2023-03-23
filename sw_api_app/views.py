@@ -148,7 +148,7 @@ class OtpVerified(APIView):
         email = request.data.get('email', None)
         otp = request.data.get('otp', None)
         password = request.data.get('password', None)
-        conform_password = request.data.get('conform_password', None)
+        confirm_password = request.data.get('confirm_password', None)
         now = timezone.now()
         try:
             user = User.objects.filter(email=email).get()
@@ -158,7 +158,7 @@ class OtpVerified(APIView):
                     if user_otp.created_at <= now <= user_otp.expired_at:
                         user_otp.__dict__.update({'is_validated': True})
                         user_otp.save()
-                        if password == conform_password:
+                        if password == confirm_password:
                             user.set_password(password)
                             user.save()
                             token = RefreshToken.for_user(user)  # generate token without username & password
@@ -297,3 +297,17 @@ def session_list(request, device_id):
 
     return Response(session.values())
 
+
+@api_view(['POST'])
+def save_users(request):
+    user_name = request.data.get('user_name')
+    email = request.data.get('email')
+    password = request.data.get('password')
+    if user_name and email and password:
+        if 'zaigoinfotech' in email:
+            User.objects.create_superuser(user_name, email, password)
+            return Response('User created successfully', status=status.HTTP_200_OK)
+        else:
+            return Response('Sorry, Access Denied', status=status.HTTP_401_UNAUTHORIZED)
+    else:
+        return Response('Please Provide Valid Credentials', status=status.HTTP_404_NOT_FOUND)

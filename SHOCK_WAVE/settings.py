@@ -76,7 +76,7 @@ TEMPLATES = [
         },
     },
 ]
-
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 WSGI_APPLICATION = 'SHOCK_WAVE.wsgi.application'
 
 # Database
@@ -134,7 +134,7 @@ SIMPLE_JWT = {
     'JTI_CLAIM': 'jti',
 
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
-    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=30),
+    'SLIDING_TOKEN_LIFETIME': timedelta(days=350),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=356),
 }
 
@@ -177,6 +177,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_URL = 'media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field

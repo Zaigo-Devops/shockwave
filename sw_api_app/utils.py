@@ -23,7 +23,8 @@ class SendMailNotification(threading.Thread):
     def run(self) -> None:
         try:
             mail_to = self.user.email
-            context = {'user': self.user,
+            user_name = self.user.first_name + " " + self.user.last_name
+            context = {'name': user_name,
                        'otp': self.otp}
             sender = 'abinaya@zaigoinfotech.com'
             recipients = [mail_to]

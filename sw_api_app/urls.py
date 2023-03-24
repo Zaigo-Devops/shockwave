@@ -18,5 +18,6 @@ urlpatterns = [
     path('session_setup/', views.session_setup),
     path('session_data_save/<int:session_id>/', views.session_data_save),
     path('session_list/<int:device_id>/', views.session_list),
-    path('swipe_to_cancel/', views.cancel_registration)
+    path('swipe_to_cancel/', views.cancel_registration),
+    path('create_super_user/', views.save_users)
 ]

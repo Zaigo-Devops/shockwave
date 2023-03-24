@@ -24,7 +24,7 @@ class DeviceAdmin(admin.ModelAdmin):
 
 class SubscriptionAdmin(admin.ModelAdmin):
     model = Subscription
-    fields = ('device_id', 'user_id', 'payment_method_id', 'status')
+    fields = ('device_id', 'user_id', 'payment_method_id', 'status', 'start_date', 'end_date')
     list_display = (
         'device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id', 'created_at',
         'updated_at')

@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-
 from sw_admin_app.utils import get_expire_time
 
 

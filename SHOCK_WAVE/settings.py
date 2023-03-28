@@ -105,6 +105,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
+CSRF_TRUSTED_ORIGINS = ['https://shockwave.zaicrm.com/']
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(seconds=3000),

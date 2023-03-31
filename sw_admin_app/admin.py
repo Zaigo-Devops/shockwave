@@ -30,8 +30,6 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'updated_at')
     # save_on_top = True
 
-    # change_form_template = 'admin/custom_base.html'
-
     readonly_fields = ('device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id')
     actions_on_top = False
     actions_on_bottom = False

@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-my49@(@v3t2h2uzvrus4ew=gleknnodw#c0u_md#lx$8wv3_1=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -105,6 +105,8 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
+CSRF_TRUSTED_ORIGINS = ['https://shockwave.zaicrm.com/']
+CORS_ORIGIN_ALLOW_ALL = True
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(seconds=3000),

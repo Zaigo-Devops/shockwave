@@ -101,10 +101,10 @@ class LoginView(APIView):
             token_items['payment_method_count'] = payment_method
             token_items['session_count'] = session_count
             response = token_items
-            return Response(response)
+            return Response(response, status=status.HTTP_200_OK)
         else:
             content = {'message': 'Invalid User Information Provided'}
-            return Response(content)
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -188,20 +188,20 @@ class OtpVerified(APIView):
                             response = token_items
                             return Response(response)
                         else:
-                            return Response({"error": "Password fields didn't match."})
+                            return Response({"error": "Password fields didn't match."}, status=status.HTTP_400_BAD_REQUEST)
                     else:
-                        return Response({"error": 'Otp is expired'}, status.HTTP_422_UNPROCESSABLE_ENTITY)
+                        return Response({"error": 'Otp is expired'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
                 else:
                     return Response({'error': 'Otp is Invalid, please provide valid otp'},
-                                    status.HTTP_422_UNPROCESSABLE_ENTITY)
+                                    status=status.HTTP_422_UNPROCESSABLE_ENTITY)
             else:
                 return Response({'error': 'Email does not exists, please provide valid email'},
-                                status.HTTP_422_UNPROCESSABLE_ENTITY)
+                                status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         except Exception as e:
             print(str(e))
             return Response({'error': 'Please provide valid email information', "msg": str(e)},
-                            status.HTTP_400_BAD_REQUEST)
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 class BillingAddressViewSet(viewsets.ModelViewSet):
@@ -246,7 +246,7 @@ def session_setup(request):
                                                     "further process "}, status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({"message": "Failed, to setup the session", "reason": str(e)},
-                            status.HTTP_400_BAD_REQUEST)
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

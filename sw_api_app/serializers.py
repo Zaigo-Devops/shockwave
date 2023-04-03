@@ -13,6 +13,12 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'email', 'first_name', 'last_name']
 
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = '__all__'
+
+
 # Serializer to Register User
 class RegisterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
@@ -22,11 +28,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
+    insurance_provider = serializers.CharField(source="user_profile.insurance_provider", allow_blank=True,
+                                               allow_null=True, required=False, default=None, max_length=256)
 
     class Meta:
         model = User
         fields = ('email', 'password', 'password2',
-                  'first_name', 'last_name')
+                  'first_name', 'last_name', 'insurance_provider',)
         extra_kwargs = {
             'first_name': {'required': True},
             'last_name': {'required': True}
@@ -47,6 +55,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         user.set_password(validated_data['password'])
         user.save()
+        # Will get the insurance provider from the user_profile dictionary as in serializer fields it is declared that
+        # it is a related field source="user_profile.insurance_provider" hence it needs to be retrieved as mentioned
+        # below.
+        insurance_provider = validated_data.get('user_profile').get('insurance_provider')
+        user_profile = UserProfileSerializer(data={"user_id": user.pk, "insurance_provider": insurance_provider},
+                                             many=False,
+                                             read_only=False)
+        if user_profile.is_valid():
+            user_profile.save()
         return user
 
 

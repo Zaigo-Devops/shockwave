@@ -101,6 +101,10 @@ class LoginView(APIView):
             token_items['payment_method_count'] = payment_method
             token_items['session_count'] = session_count
             response = token_items
+            if not hasattr(user, "user_profile"):
+                user_profile_serializer = UserProfileSerializer(data={"user_id": user.pk})
+                if user_profile_serializer.is_valid():
+                    user_profile_serializer.save()
             return Response(response, status=status.HTTP_200_OK)
         else:
             content = {'message': 'Invalid User Information Provided'}

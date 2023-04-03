@@ -92,3 +92,19 @@ class UserOtp(models.Model):
     is_validated = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now=True)
     expired_at = models.DateTimeField(default=get_expire_time)
+
+
+class UserProfile(models.Model):
+    user_id = models.OneToOneField(User, on_delete=models.SET_NULL, default=None, null=True,
+                                   related_name="user_profile")
+    insurance_provider = models.CharField(max_length=256, null=True, default=None)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class UserDevice(models.Model):
+    user_id = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, blank=True,
+                                related_name="user_device")
+    mobile_device_id = models.CharField(max_length=256, null=True, default=None)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

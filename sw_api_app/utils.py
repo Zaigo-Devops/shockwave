@@ -55,5 +55,5 @@ class SendMailNotification(threading.Thread):
 
 def get_attachment_from_name(member_name):
     avinit.get_png_avatar(member_name, output_file='media/tmp.png')
-    file_name = f"media/MEM_{member_name}{timezone.now().strftime('%Y%m%d%s%f')}.png"
+    file_name = f"MEM_{member_name}{timezone.now().strftime('%Y%m%d%s%f')}.png"
     return File(file=open("media/tmp.png", 'rb'), name=file_name)

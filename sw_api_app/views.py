@@ -212,7 +212,6 @@ class OtpVerified(APIView):
 
 
 class UserView(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -343,3 +342,22 @@ def save_users(request):
             return Response('Please Provide Valid Credentials', status=status.HTTP_404_NOT_FOUND)
 
 
+@api_view(['GET'])
+def previous_connected_list(request):
+    if request.method == 'GET':
+        try:
+            subscriptions = Subscription.objects.all()
+            final_list = []
+            for subscription in subscriptions:
+                registered_list = {'subscription_id': subscription.id,
+                                   'subscription_stripe_payment_id': subscription.stripe_payment_id,
+                                   'subscription_stripe_customer_id': subscription.stripe_customer_id,
+                                   'device_name': subscription.device_id.device_name,
+                                   'device_serial_no': subscription.device_id.device_serial_no,
+                                   'is_subscription_active': subscription.status,
+                                   'subscription_start_date': subscription.start_date,
+                                   'subscription_end_date': subscription.end_date}
+                final_list.append(registered_list)
+            return Response(final_list, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response('No Devices !!', status=status.HTTP_204_NO_CONTENT), print(str(e))

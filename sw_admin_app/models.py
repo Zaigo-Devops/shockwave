@@ -82,9 +82,6 @@ class Subscription(models.Model):
         payments = self.payment_method_id.payment_id
         return payments
 
-    class Meta:
-        verbose_name = "subscription"
-
 
 class UserOtp(models.Model):
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, blank=True)

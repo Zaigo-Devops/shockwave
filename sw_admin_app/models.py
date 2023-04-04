@@ -98,6 +98,7 @@ class UserProfile(models.Model):
     user_id = models.OneToOneField(User, on_delete=models.SET_NULL, default=None, null=True,
                                    related_name="user_profile")
     insurance_provider = models.CharField(max_length=256, null=True, default=None)
+    user_profile_image = models.ImageField(default=None, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

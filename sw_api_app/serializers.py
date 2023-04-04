@@ -3,6 +3,7 @@ from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 
 from sw_admin_app.models import *
+from sw_api_app.utils import get_attachment_from_name
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -17,6 +18,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = '__all__'
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    insurance_provider = serializers.CharField(source="user_profile.insurance_provider", read_only=True)
+    user_profile_image = serializers.ImageField(source="user_profile.user_profile_image", read_only=True)
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'first_name', 'last_name', 'insurance_provider', 'user_profile_image',)
 
 
 # Serializer to Register User
@@ -58,8 +68,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Will get the insurance provider from the user_profile dictionary as in serializer fields it is declared that
         # it is a related field source="user_profile.insurance_provider" hence it needs to be retrieved as mentioned
         # below.
+        user_name = f'{user.first_name} {user.last_name}'
         insurance_provider = validated_data.get('user_profile').get('insurance_provider')
-        user_profile = UserProfileSerializer(data={"user_id": user.pk, "insurance_provider": insurance_provider},
+        user_profile = UserProfileSerializer(data={"user_id": user.pk, "insurance_provider": insurance_provider,
+                                                   "user_profile_image": get_attachment_from_name(user_name)},
                                              many=False,
                                              read_only=False)
         if user_profile.is_valid():

@@ -102,7 +102,9 @@ class LoginView(APIView):
             token_items['session_count'] = session_count
             response = token_items
             if not hasattr(user, "user_profile"):
-                user_profile_serializer = UserProfileSerializer(data={"user_id": user.pk})
+                user_name = f"{user.first_name} {user.last_name}"
+                user_profile_serializer = UserProfileSerializer(
+                    data={"user_id": user.pk, "user_profile_image": get_attachment_from_name(user_name)})
                 if user_profile_serializer.is_valid():
                     user_profile_serializer.save()
             return Response(response, status=status.HTTP_200_OK)
@@ -192,7 +194,8 @@ class OtpVerified(APIView):
                             response = token_items
                             return Response(response)
                         else:
-                            return Response({"error": "Password fields didn't match."}, status=status.HTTP_400_BAD_REQUEST)
+                            return Response({"error": "Password fields didn't match."},
+                                            status=status.HTTP_400_BAD_REQUEST)
                     else:
                         return Response({"error": 'Otp is expired'}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
@@ -206,6 +209,28 @@ class OtpVerified(APIView):
             print(str(e))
             return Response({'error': 'Please provide valid email information', "msg": str(e)},
                             status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        member_id = get_member_id(request)
+        user = User.objects.get(pk=member_id)
+        user_detail = UserDetailSerializer(instance=user, read_only=True, many=False)
+        user_details = user_detail.data
+        return Response(user_details, status.HTTP_200_OK)
+
+    def patch(self, request):
+        member_id = get_member_id(request)
+        user = User.objects.get(pk=member_id)
+        user_detail = UserDetailSerializer(instance=user, data=request.data, many=False, partial=True)
+        user_detail.is_valid(raise_exception=True)
+        user_detail.save()
+        if hasattr(user, 'user_profile_image'):
+            pass
+        return Response(user_detail.data, status=status.HTTP_200_OK)
 
 
 class BillingAddressViewSet(viewsets.ModelViewSet):
@@ -316,3 +341,5 @@ def save_users(request):
                 return Response('Sorry, Access Denied', status=status.HTTP_401_UNAUTHORIZED)
         else:
             return Response('Please Provide Valid Credentials', status=status.HTTP_404_NOT_FOUND)
+
+

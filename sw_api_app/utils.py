@@ -1,7 +1,12 @@
 import threading
+import smtplib
+import avinit
+
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
-import smtplib
+from django.utils import timezone
+from django.core.files.base import File
+
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from SHOCK_WAVE.settings import EMAIL_PORT, EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
@@ -46,3 +51,9 @@ class SendMailNotification(threading.Thread):
             print("error:", str(e))
             pass
         return
+
+
+def get_attachment_from_name(member_name):
+    avinit.get_png_avatar(member_name, output_file='media/tmp.png')
+    file_name = f"media/MEM_{member_name}{timezone.now().strftime('%Y%m%d%s%f')}.png"
+    return File(file=open("media/tmp.png", 'rb'), name=file_name)

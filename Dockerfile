@@ -7,6 +7,11 @@ WORKDIR /app
 # Copy all the files from current directory to docker container's app directory
 COPY . /app
 
+# Wkhtmltopdf for generating default image
+RUN apt-get update \
+    && apt-get -y install libpq-dev gcc \
+    && apt-get -y install wkhtmltopdf
+
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from .stripe import delete_subscription
 from .utils import get_member_id
 from django.contrib.auth import authenticate
@@ -44,6 +46,11 @@ class RegisterUserAPIView(generics.CreateAPIView):
         email_of_user = response['email']
         user = User.objects.get(email=email_of_user)
         token = RefreshToken.for_user(user)  # generate token without username & password
+        at = token.access_token
+        at.set_exp(from_time=None, lifetime=timedelta(days=360))
+        access_token = str(at)
+        token.set_exp(from_time=None, lifetime=timedelta(days=367))
+
         payment_method = user.subscription_set.filter(status=1).count()
         payment_method_added = False
         if payment_method > 0:
@@ -60,7 +67,7 @@ class RegisterUserAPIView(generics.CreateAPIView):
         for item in token_items:
             if item != "user_id":
                 RefreshToken.__setitem__(token, item, token_items[item])
-        token_items['access_token'] = str(token.access_token)
+        token_items['access_token'] = access_token
         token_items['refresh_token'] = str(token)
         token_items['device_count'] = payment_method
         token_items['payment_method_added'] = payment_method_added
@@ -77,6 +84,12 @@ class LoginView(APIView):
         user = authenticate(username=email, password=password)
         if user is not None:
             token = RefreshToken.for_user(user)  # generate token without username & password
+
+            at = token.access_token
+            at.set_exp(from_time=None, lifetime=timedelta(days=360))
+            access_token = str(at)
+            token.set_exp(from_time=None, lifetime=timedelta(days=367))
+
             user_name = user.first_name
             if len(user.last_name) > 0:
                 user_name = user.first_name + ' ' + user.last_name
@@ -94,7 +107,7 @@ class LoginView(APIView):
             for item in token_items:
                 if item != "user_id":
                     RefreshToken.__setitem__(token, item, token_items[item])
-            token_items['access_token'] = str(token.access_token)
+            token_items['access_token'] = access_token
             token_items['refresh_token'] = str(token)
             token_items['device_count'] = payment_method
             token_items['payment_method_added'] = payment_method_added
@@ -227,8 +240,11 @@ class UserView(APIView):
         user_detail = UserDetailSerializer(instance=user, data=request.data, many=False, partial=True)
         user_detail.is_valid(raise_exception=True)
         user_detail.save()
-        if hasattr(user, 'user_profile_image'):
-            pass
+        if hasattr(user, 'user_profile'):
+            user_profile = UserProfileSerializer(instance=user.user_profile, data=request.data, many=False,
+                                                 partial=True)
+            user_profile.is_valid(raise_exception=True)
+            user_profile.save()
         return Response(user_detail.data, status=status.HTTP_200_OK)
 
 

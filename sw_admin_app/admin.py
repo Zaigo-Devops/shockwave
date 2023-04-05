@@ -52,7 +52,6 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
     def delete_model(self, request, obj):
         if obj:
-            print(obj.id)
             obj.status = 0
             obj.save()
             delete_subscription(obj.id)

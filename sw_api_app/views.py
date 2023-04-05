@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from .stripe import delete_subscription
+from .stripe import delete_subscription, create_payment_customer
 from .utils import get_member_id
 from django.contrib.auth import authenticate
 from requests import Response
@@ -115,11 +115,16 @@ class LoginView(APIView):
             token_items['session_count'] = session_count
             response = token_items
             if not hasattr(user, "user_profile"):
+                customer_create = create_payment_customer(user_name, email)
+                response['stripe_customer_id'] = customer_create['id']
                 user_name = f"{user.first_name} {user.last_name}"
                 user_profile_serializer = UserProfileSerializer(
-                    data={"user_id": user.pk, "user_profile_image": get_attachment_from_name(user_name)})
+                    data={"user_id": user.pk, "user_profile_image": get_attachment_from_name(user_name),
+                          "stripe_customer_id": customer_create['id']})
                 if user_profile_serializer.is_valid():
                     user_profile_serializer.save()
+            if hasattr(user, "user_profile"):
+                response['stripe_customer_id'] = user.user_profile.stripe_customer_id
             return Response(response, status=status.HTTP_200_OK)
         else:
             content = {'message': 'Invalid User Information Provided'}

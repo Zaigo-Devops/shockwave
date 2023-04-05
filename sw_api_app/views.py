@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from .stripe import delete_subscription, create_payment_customer
+from .stripe import delete_subscription
 from .utils import get_member_id, get_paginated_response, generate_user_cards
 from django.contrib.auth import authenticate
 from requests import Response
@@ -59,9 +59,6 @@ class RegisterUserAPIView(generics.CreateAPIView):
         user_name = user.first_name
         if len(user.last_name) > 0:
             user_name = user.first_name + ' ' + user.last_name
-        print(user_name, email_of_user)
-        stripe_customer_create = create_payment_customer(name=user_name, email=email_of_user)
-        UserProfile.objects.create(user_id=user, stripe_customer_id=stripe_customer_id['id'])
         token_items = {
             'user_id': user.pk,
             'name': user_name,
@@ -76,7 +73,7 @@ class RegisterUserAPIView(generics.CreateAPIView):
         token_items['payment_method_added'] = payment_method_added
         token_items['payment_method_count'] = payment_method
         token_items['session_count'] = session_count
-        token_items['stripe_customer_id'] = stripe_customer_create['id']
+        token_items['stripe_customer_id'] = user.user_profile.stripe_customer_id
         response = token_items
         return Response(response)
 

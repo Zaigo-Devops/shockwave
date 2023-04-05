@@ -96,6 +96,7 @@ class UserProfile(models.Model):
                                    related_name="user_profile")
     insurance_provider = models.CharField(max_length=256, null=True, default=None)
     user_profile_image = models.ImageField(default=None, null=True, blank=True)
+    stripe_customer_id = models.CharField(max_length=256, blank=True, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

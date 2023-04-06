@@ -1,7 +1,8 @@
 from datetime import timedelta
 
-from .stripe import delete_subscription, create_payment_customer
-from .utils import get_member_id
+from .stripe import delete_subscription
+from .utils import get_member_id, get_paginated_response, generate_user_cards
+
 from django.contrib.auth import authenticate
 from requests import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -17,10 +18,10 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from sw_api_app.utils import SendMailNotification
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 
 
 # Class based view to Get User Details using Token Authentication
-
 
 class UserDetailAPI(APIView):
     authentication_classes = (TokenAuthentication,)
@@ -73,6 +74,7 @@ class RegisterUserAPIView(generics.CreateAPIView):
         token_items['payment_method_added'] = payment_method_added
         token_items['payment_method_count'] = payment_method
         token_items['session_count'] = session_count
+        token_items['stripe_customer_id'] = user.user_profile.stripe_customer_id
         response = token_items
         return Response(response)
 
@@ -300,13 +302,15 @@ def session_setup(request):
 
 @api_view(['POST'])
 def cancel_registration(request):
-    subscription_id = request.data.get('subscription_id', '')
-    if subscription_id:
+    user_id = get_member_id(request)
+    subscription_id = request.data.get('subscription_id', None)
+    subscription = Subscription.objects.filter(id=subscription_id, user_id=user_id).exists()
+    if subscription:
         delete_subscription(subscription_id)
         Subscription.objects.filter(id=subscription_id).update(status=0)
         return Response('Subscription Cancelled !!!', status=status.HTTP_200_OK)
     else:
-        return Response('Invalid Subscription ID', status=status.HTTP_404_NOT_FOUND)
+        return Response('Invalid Subscription ID Provided', status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])
@@ -382,3 +386,24 @@ def previous_connected_list(request):
             return Response(final_list, status=status.HTTP_200_OK)
         except Exception as e:
             return Response('No Devices !!', status=status.HTTP_204_NO_CONTENT), print(str(e))
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def device_session_history(request):
+    user_id = get_member_id(request)
+    device_serial_no = request.data.get('device_serial_no', None)
+    limit = request.GET.get('per_page', 9)
+    page_number = request.GET.get('page', 1)
+    current_url = f'{request.build_absolute_uri()}'
+    extras = {
+        "per_page": limit
+    }
+    device_id_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
+    if device_id_list:
+        sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
+        if device_serial_no:
+            sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no).order_by('created_at')
+        response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
+        response['data'] = generate_user_cards(response['data'], True)
+        return Response(response, status=status.HTTP_200_OK)
+    return Response(get_paginated_response(Device.objects.none(), current_url, 1, limit, extras, True))

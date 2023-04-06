@@ -21,5 +21,6 @@ urlpatterns = [
     path('swipe_to_cancel/', views.cancel_registration),
     path('create_super_user/', views.save_users),
     path('my_profile/', UserView.as_view()),
-    path('registered_list', views.previous_connected_list)
+    path('registered_list', views.previous_connected_list),
+    path('device_session_history/', views.device_session_history)
 ]

@@ -1,6 +1,7 @@
 import threading
 import smtplib
 import avinit
+from django.core.paginator import Paginator
 
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
@@ -57,3 +58,70 @@ def get_attachment_from_name(member_name):
     avinit.get_png_avatar(member_name, output_file='media/tmp.png')
     file_name = f"MEM_{member_name}{timezone.now().strftime('%Y%m%d%s%f')}.png"
     return File(file=open("media/tmp.png", 'rb'), name=file_name)
+
+
+def get_paginated_response(queryset, url, page_number, limit, extras=None, empty=False):
+    try:
+        if empty or queryset.count() == 0:
+            return {
+                "links": {
+                    "next": None,
+                    "previous": None
+                },
+                "per_page": limit,
+                "page": page_number,
+                "total_pages": 0,
+                "total": 0,
+                "data": []
+            }
+        join_word = '?'
+        if join_word in url:
+            url = url.rpartition(join_word)[0]
+        if not extras:
+            extras = {}
+        paginate = Paginator(queryset, limit)
+        page = paginate.page(page_number)
+        data = page.object_list
+        paginated_response = {
+            "per_page": limit,
+            "page": page_number,
+            "total_pages": paginate.num_pages,
+            "total": paginate.count,
+            "data": data
+        }
+        return paginated_response
+    except Exception as e:
+        return {
+            "links": {
+                "next": None,
+                "previous": None
+            },
+            "per_page": limit,
+            "page": page_number,
+            "total_pages": 0,
+            "total": 0,
+            "data": [],
+            "message": str(e)
+        }
+
+
+def generate_user_cards(queryset, is_many=False):
+    if is_many:
+        records = []
+        for record in queryset:
+            records.append(generate_user_card(record))
+        return records
+    return generate_user_card(queryset)
+
+
+def generate_user_card(obj):
+    session_data = {
+        "session_data_id": obj.pk,
+        "device_serial_no": obj.device_id.device_serial_no,
+        "device_name": obj.device_id.device_name,
+        "environment": obj.session_id.environment,
+        "location": obj.session_id.location,
+        "energy_level": obj.energy_data,
+        "created_at": obj.created_at
+    }
+    return session_data

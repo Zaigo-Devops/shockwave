@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
-
+from .stripe import create_payment_customer
 from sw_admin_app.models import *
 from sw_api_app.utils import get_attachment_from_name
 
@@ -69,9 +69,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         # it is a related field source="user_profile.insurance_provider" hence it needs to be retrieved as mentioned
         # below.
         user_name = f'{user.first_name} {user.last_name}'
+        name = user.first_name
+        if len(user.last_name) > 0:
+            name = user.first_name + ' ' + user.last_name
+        stripe_customer_create = create_payment_customer(name=name, email=user.email)
         insurance_provider = validated_data.get('user_profile').get('insurance_provider')
         user_profile = UserProfileSerializer(data={"user_id": user.pk, "insurance_provider": insurance_provider,
-                                                   "user_profile_image": get_attachment_from_name(user_name)},
+                                                   "user_profile_image": get_attachment_from_name(user_name),
+                                                   "stripe_customer_id": stripe_customer_create['id']},
                                              many=False,
                                              read_only=False)
         if user_profile.is_valid():

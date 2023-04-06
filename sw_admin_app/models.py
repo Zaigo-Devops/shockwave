@@ -49,6 +49,8 @@ class Session(models.Model):
 
 class SessionData(models.Model):
     energy_data = models.JSONField(default=None, null=True)
+    lowest_energy_level = models.FloatField(default=None, null=True)
+    highest_energy_level = models.FloatField(default=None, null=True)
     session_id = models.ForeignKey(Session, on_delete=models.SET_NULL, null=True)
     device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True)
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)

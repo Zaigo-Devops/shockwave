@@ -280,6 +280,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     serializer_class = SubscriptionSerializer
     queryset = Subscription.objects.all()
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def session_setup(request):

@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth.models import User
 
-from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData
+from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer
 from .stripe import delete_subscription, create_payment_customer

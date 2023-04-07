@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
-    BillingAddressSerializer, DeviceSerializer
+    BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name
 
@@ -276,6 +276,10 @@ class DeviceViewSet(viewsets.ModelViewSet):
     queryset = Device.objects.all()
 
 
+class SubscriptionViewSet(viewsets.ModelViewSet):
+    serializer_class = SubscriptionSerializer
+    queryset = Subscription.objects.all()
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def session_setup(request):
@@ -458,4 +462,3 @@ def payment_method_creation(request):
             return Response('Payment method saved successfully', status=status.HTTP_200_OK)
         except Exception as e:
             return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
-

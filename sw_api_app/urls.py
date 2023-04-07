@@ -6,6 +6,7 @@ from .views import *
 
 router = routers.DefaultRouter()
 router.register('billing_address', viewset=BillingAddressViewSet)
+router.register('device', viewset=DeviceViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

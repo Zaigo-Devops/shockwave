@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
-    BillingAddressSerializer
+    BillingAddressSerializer, DeviceSerializer
 from .stripe import delete_subscription, create_payment_customer
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name
 
@@ -269,6 +269,11 @@ class UserView(APIView):
 class BillingAddressViewSet(viewsets.ModelViewSet):
     serializer_class = BillingAddressSerializer
     queryset = BillingAddress.objects.all()
+
+
+class DeviceViewSet(viewsets.ModelViewSet):
+    serializer_class = DeviceSerializer
+    queryset = Device.objects.all()
 
 
 @api_view(['POST'])

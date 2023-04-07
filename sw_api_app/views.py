@@ -329,6 +329,9 @@ def cancel_registration(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def session_data_save(request, session_id):
+    """
+    Api for save the session data history against the respective user,device and session.
+    """
     data = request.data
     session_data = data.get('session_data', None)
     device_serial_no = data.get('device_serial_no', None)
@@ -337,7 +340,9 @@ def session_data_save(request, session_id):
         device = Device.objects.filter(device_serial_no=device_serial_no).first()
         user = User.objects.filter(pk=user_id).first()
         session = Session.objects.filter(pk=session_id).first()
+        # session data value provide as list so save as json with key "energy_levels"
         energy_list = session_data['energy_levels']
+        # In list take overall minimum and maximum for a session by using below function.
         low_energy_level = min(energy_list)
         high_energy_level = max(energy_list)
         session_data = SessionData.objects.create(energy_data=session_data, lowest_energy_level=low_energy_level,

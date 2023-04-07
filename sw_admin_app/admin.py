@@ -12,14 +12,14 @@ class DeviceAdmin(admin.ModelAdmin):
     fields = ('device_name', 'device_serial_no',)
     list_display = ('device_name', 'device_serial_no',)
 
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        product_name = obj.device_name
-        description = f'Product name : {product_name}, Product id : {obj.id}'
-        product_id = create_product(product_name, description)['id']
-        price_id = create_price(25, 'usd', 'month', product_id)['id']
-        obj.device_price_id = price_id
-        obj.save()
+    # def save_model(self, request, obj, form, change):
+    #     super().save_model(request, obj, form, change)
+    #     product_name = obj.device_name
+    #     description = f'Product name : {product_name}, Product id : {obj.id}'
+    #     product_id = create_product(product_name, description)['id']
+    #     price_id = create_price(25, 'usd', 'month', product_id)['id']
+    #     obj.device_price_id = price_id
+    #     obj.save()
 
 
 class SubscriptionAdmin(admin.ModelAdmin):

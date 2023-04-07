@@ -389,7 +389,8 @@ def save_users(request):
 def previous_connected_list(request):
     if request.method == 'GET':
         try:
-            subscriptions = Subscription.objects.all()
+            user_id = get_member_id(request)
+            subscriptions = Subscription.objects.filter(user_id=user_id)
             final_list = []
             for subscription in subscriptions:
                 registered_list = {'subscription_id': subscription.id,
@@ -439,3 +440,4 @@ def payment_method_creation(request):
             return Response('Payment method saved successfully', status=status.HTTP_200_OK)
         except Exception as e:
             return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+

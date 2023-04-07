@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth.models import User
 
-from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData
+from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer
 from .stripe import delete_subscription, create_payment_customer
@@ -22,8 +22,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from sw_api_app.utils import SendMailNotification
 from rest_framework.permissions import IsAuthenticated
 
-
-# Class based view to Get User Details using Token Authentication
 
 class UserDetailAPI(APIView):
     authentication_classes = (TokenAuthentication,)
@@ -314,6 +312,7 @@ def session_setup(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def cancel_registration(request):
     user_id = get_member_id(request)
     subscription_id = request.data.get('subscription_id', None)
@@ -374,6 +373,7 @@ def session_list(request, device_id):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def save_users(request):
     if request.method == 'POST':
         user_name = request.data.get('user_name')
@@ -394,7 +394,8 @@ def save_users(request):
 def previous_connected_list(request):
     if request.method == 'GET':
         try:
-            subscriptions = Subscription.objects.all()
+            user_id = get_member_id(request)
+            subscriptions = Subscription.objects.filter(user_id=user_id)
             final_list = []
             for subscription in subscriptions:
                 registered_list = {'subscription_id': subscription.id,
@@ -431,3 +432,17 @@ def device_session_history(request):
         response['data'] = generate_user_cards(response['data'], True)
         return Response(response, status=status.HTTP_200_OK)
     return Response(get_paginated_response(Device.objects.none(), current_url, 1, limit, extras, True))
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_method_creation(request):
+    if request.method == 'POST':
+        try:
+            user_id = get_member_id(request)
+            payment_id = request.data['payment_id']
+            PaymentMethod.objects.create(payment_id=payment_id, user_id=user_id)
+            return Response('Payment method saved successfully', status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+

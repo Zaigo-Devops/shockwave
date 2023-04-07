@@ -417,17 +417,25 @@ def previous_connected_list(request):
 def device_session_history(request):
     user_id = get_member_id(request)
     device_serial_no = request.data.get('device_serial_no', None)
+    start_date = request.data.get('start_date', None)
+    end_date = request.data.get('end_date', None)
     limit = request.GET.get('per_page', 9)
     page_number = request.GET.get('page', 1)
     current_url = f'{request.build_absolute_uri()}'
     extras = {
         "per_page": limit
     }
+    if start_date and not end_date:
+        return Response("please provide End_date")
+    if not start_date and end_date:
+        return Response("please provide Start_date")
     device_id_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
     if device_id_list:
         sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
         if device_serial_no:
             sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no).order_by('created_at')
+        if start_date and end_date:
+            sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
         response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
         response['data'] = generate_user_cards(response['data'], True)
         return Response(response, status=status.HTTP_200_OK)

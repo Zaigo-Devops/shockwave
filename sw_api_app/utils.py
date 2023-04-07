@@ -113,13 +113,17 @@ def generate_user_cards(queryset, is_many=False):
 
 
 def generate_user_card(obj):
+    energy = obj.energy_data
+    energy_level_list = energy['energy_levels']
     session_data = {
         "session_data_id": obj.pk,
         "device_serial_no": obj.device_id.device_serial_no,
         "device_name": obj.device_id.device_name,
         "environment": obj.session_id.environment,
         "location": obj.session_id.location,
-        "energy_level": obj.energy_data,
+        "energy_levels": energy_level_list,
+        "lowest_energy_level": obj.lowest_energy_level,
+        "highest_energy_level": obj.highest_energy_level,
         "created_at": obj.created_at
     }
     return session_data

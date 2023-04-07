@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer, DeviceSerializer
-from .stripe import delete_subscription, create_payment_customer
+from .stripe import delete_subscription, create_payment_customer, create_payment_method
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name
 
 from django.contrib.auth import authenticate
@@ -439,10 +439,18 @@ def device_session_history(request):
 def payment_method_creation(request):
     if request.method == 'POST':
         try:
+            card_type = request.data.get('card_type', None)
+            card_number = request.data.get('card_number', None)
+            card_exp_month = request.data.get('card_exp_month', None)
+            card_exp_year = request.data.get('card_exp_year', None)
+            card_cvc = request.data.get('card_cvc', None)
+            name = request.data.get('name', None)
+            email = request.data.get('email', None)
+            address = request.data.get('address', None)
             user_id = get_member_id(request)
-            payment_id = request.data['payment_id']
+            payment_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year, card_cvc, name,
+                                               email, address)
             PaymentMethod.objects.create(payment_id=payment_id, user_id=user_id)
             return Response('Payment method saved successfully', status=status.HTTP_200_OK)
         except Exception as e:
             return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
-

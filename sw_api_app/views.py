@@ -1,7 +1,12 @@
 from datetime import timedelta
 
-from .stripe import delete_subscription
-from .utils import get_member_id, get_paginated_response, generate_user_cards
+from django.contrib.auth.models import User
+
+from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData
+from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
+    BillingAddressSerializer
+from .stripe import delete_subscription, create_payment_customer
+from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name
 
 from django.contrib.auth import authenticate
 from requests import Response
@@ -11,7 +16,6 @@ from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
 from django.utils import timezone
 from sw_admin_app.utils import generate_otp
-from sw_api_app.serializers import *
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -208,6 +212,17 @@ class OtpVerified(APIView):
                             token_items['payment_method_count'] = payment_method
                             token_items['session_count'] = session_count
                             response = token_items
+                            if not hasattr(user, "user_profile"):
+                                customer_create = create_payment_customer(user_name, email)
+                                response['stripe_customer_id'] = customer_create['id']
+                                user_name = f"{user.first_name} {user.last_name}"
+                                user_profile_serializer = UserProfileSerializer(
+                                    data={"user_id": user.pk, "user_profile_image": get_attachment_from_name(user_name),
+                                          "stripe_customer_id": customer_create['id']})
+                                if user_profile_serializer.is_valid():
+                                    user_profile_serializer.save()
+                            if hasattr(user, "user_profile"):
+                                response['stripe_customer_id'] = user.user_profile.stripe_customer_id
                             return Response(response)
                         else:
                             return Response({"error": "Password fields didn't match."},
@@ -321,8 +336,12 @@ def session_data_save(request, session_id):
         device = Device.objects.filter(device_serial_no=device_serial_no).first()
         user = User.objects.filter(pk=user_id).first()
         session = Session.objects.filter(pk=session_id).first()
-        session_data = SessionData.objects.create(energy_data=session_data, session_id=session, device_id=device,
-                                                  user_id=user)
+        energy_list = session_data['energy_levels']
+        low_energy_level = min(energy_list)
+        high_energy_level = max(energy_list)
+        session_data = SessionData.objects.create(energy_data=session_data, lowest_energy_level=low_energy_level,
+                                                  highest_energy_level=high_energy_level, session_id=session,
+                                                  device_id=device, user_id=user)
         return Response({'message': "Session Data Save Successfully"}, status=status.HTTP_200_OK)
     else:
         return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)

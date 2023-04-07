@@ -2,12 +2,10 @@ import threading
 import smtplib
 import avinit
 from django.core.paginator import Paginator
-
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.core.files.base import File
-
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from SHOCK_WAVE.settings import EMAIL_PORT, EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD

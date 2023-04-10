@@ -309,7 +309,8 @@ def session_setup(request):
                                                                     state=state, country=country,
                                                                     pin_code=pin_code, latitude=latitude,
                                                                     longitude=longitude)
-                            return Response({'message': 'Session Created Successfully'}, status=status.HTTP_200_OK)
+                            return Response({'message': 'Session Created Successfully', 'session_id': session_create.pk}
+                                            , status=status.HTTP_200_OK)
                         else:
                             return Response({'message': 'Please provide valid data information'},
                                             status=status.HTTP_400_BAD_REQUEST)
@@ -354,10 +355,13 @@ def session_data_save(request, session_id):
         # In list take overall minimum and maximum for a session by using below function.
         low_energy_level = min(energy_list)
         high_energy_level = max(energy_list)
-        session_data = SessionData.objects.create(energy_data=session_data, lowest_energy_level=low_energy_level,
+        session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
                                                   highest_energy_level=high_energy_level, session_id=session,
                                                   device_id=device, user_id=user)
-        return Response({'message': "Session Data Save Successfully"}, status=status.HTTP_200_OK)
+        return Response({"message": "Session Data Save Successfully", "session_id": session.pk,
+                         "energy_levels": session_data.energy_data,
+                         "highest_energy_level": session_data.highest_energy_level,
+                         "lowest_energy_level": session_data.lowest_energy_level}, status=status.HTTP_200_OK)
     else:
         return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -463,3 +467,4 @@ def payment_method_creation(request):
             return Response('Payment method saved successfully', status=status.HTTP_200_OK)
         except Exception as e:
             return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+

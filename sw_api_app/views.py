@@ -5,7 +5,8 @@ from django.contrib.auth.models import User
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer, DeviceSerializer
-from .stripe import delete_subscription, create_payment_customer, create_payment_method
+from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
+    create_address
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name
 
 from django.contrib.auth import authenticate
@@ -446,11 +447,61 @@ def payment_method_creation(request):
             card_cvc = request.data.get('card_cvc', None)
             name = request.data.get('name', None)
             email = request.data.get('email', None)
-            address = request.data.get('address', None)
+            line1 = request.data.get('line1', None)
+            line2 = request.data.get('line2', None)
+            city = request.data.get('city', None)
+            state = request.data.get('state', None)
+            postal_code = request.data.get('postal_code', None)
+            country = request.data.get('country', None)
+            address = create_address(line1, line2, city, state, postal_code, country)
             user_id = get_member_id(request)
-            payment_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year, card_cvc, name,
-                                               email, address)
-            PaymentMethod.objects.create(payment_id=payment_id, user_id=user_id)
-            return Response('Payment method saved successfully', status=status.HTTP_200_OK)
+            created_payment_method_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year,
+                                                              card_cvc,
+                                                              name, email, address)
+            payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id, user_id=user_id)
+            BillingAddress.objects.create(name=name, user_id=user_id, line_1=line1, line_2=line2, city=city,
+                                          state=state, country=country, pin_code=postal_code)
+            return Response({'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id},
+                            status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_method_attachment(request):
+    if request.method == 'POST':
+        try:
+            payment_method_id = request.data.get('payment_method_id')
+            name = request.data.get('name')
+            email = request.data.get('email')
+            address = request.data.get('address', None)
+            payment_customer_id = create_payment_customer(name, email, address)
+            attach_payment_method(payment_customer_id, payment_method_id)
+            return Response('Payment method attachment created successfully', status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_payment_method(request):
+    if request.method == 'GET':
+        try:
+            user_id = get_member_id(request)
+            payment_method_list = PaymentMethod.objects.filter(user_id=user_id).values()
+            return Response(payment_method_list, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def delete_payment_method(request):
+    if request.method == 'POST':
+        try:
+            user_id = get_member_id(request)
+            PaymentMethod.objects.filter(user_id=user_id).delete()
+            return Response('Payment method deleted successfully', status=status.HTTP_200_OK)
         except Exception as e:
             return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))

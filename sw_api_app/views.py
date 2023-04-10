@@ -1,11 +1,13 @@
+import datetime
 from datetime import timedelta
 
 from django.contrib.auth.models import User
 
-from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod
+from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
+    UserProfile
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
-from .stripe import delete_subscription, create_payment_customer
+from .stripe import delete_subscription, create_payment_customer, create_product, create_price, create_subscription
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name
 
 from django.contrib.auth import authenticate
@@ -468,3 +470,45 @@ def payment_method_creation(request):
         except Exception as e:
             return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def payment_method_initialized(request):
+    try:
+        if request.method == "POST":
+            device_serial_no = request.data.get('device_serial_no')
+            device_name = request.data.get('device_name')
+            # stripe_customer_id = request.data.get('stripe_customer_id')  ## need to take customer_id against the
+            # user from user_profile table
+            payment_method_id = request.data.get('payment_method_id')  ## user based  filter need to done
+            start_date = datetime.date.today()
+            end_date = start_date + datetime.timedelta(days=30)
+            user_id = get_member_id(request)
+            user = User.objects.get(pk=user_id)
+            user_profile = UserProfile.objects.get(user_id=user_id)
+            stripe_customer_id = user_profile.stripe_customer_id
+            if payment_method_id:
+                payment_method = PaymentMethod.objects.get(pk=payment_method_id, user_id=user_id)
+            else:
+                payment_method = PaymentMethod.objects.filter(user_id=user_id).first()
+            stripe_payment_id = payment_method.payment_id
+            if device_serial_no and device_name and stripe_customer_id:
+                stripe_product_id = create_product(product_name=device_serial_no,
+                                                   description=f'The {device_name},{device_serial_no} device is registered.')[
+                    'id']
+                stripe_product_price_id = \
+                    create_price(amount=25, currency='usd', interval='month', product_id=stripe_product_id)['id']
+                stripe_Subscription_id = \
+                    create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id)['id']
+                # need to register the device in our table
+                register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
+                                                        device_price_id=stripe_product_price_id)
+                subscription = Subscription.objects.create(status=True, device_id=register_device, user_id=user,
+                                                           payment_method_id=payment_method,
+                                                           stripe_payment_id=stripe_payment_id,
+                                                           stripe_customer_id=stripe_customer_id, start_date=start_date,
+                                                           end_date=end_date)
+                return Response({"message": "success"}, status=status.HTTP_200_OK)
+            return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))

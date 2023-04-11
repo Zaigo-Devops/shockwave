@@ -424,7 +424,7 @@ def previous_connected_list(request):
                 final_list.append(registered_list)
             return Response(final_list, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('No Devices !!', status=status.HTTP_204_NO_CONTENT), print(str(e))
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -486,7 +486,7 @@ def payment_method_creation(request):
             return Response({'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id},
                             status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -502,7 +502,7 @@ def payment_method_attachment(request):
             attach_payment_method(payment_customer_id, payment_method_id)
             return Response('Payment method attachment created successfully', status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -514,7 +514,7 @@ def my_payment_method(request):
             payment_method_list = PaymentMethod.objects.filter(user_id=user_id).values()
             return Response(payment_method_list, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -526,4 +526,4 @@ def delete_payment_method(request):
             PaymentMethod.objects.filter(user_id=user_id).delete()
             return Response('Payment method deleted successfully', status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)

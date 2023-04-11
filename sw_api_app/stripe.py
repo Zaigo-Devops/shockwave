@@ -98,6 +98,7 @@ def create_subscription(customer_id, price_id):
             },
         ],
         payment_behavior="default_incomplete",
+        collection_method="charge_automatically"
         # expand=["latest_invoice.payment_intent"],
     )
     return subscription

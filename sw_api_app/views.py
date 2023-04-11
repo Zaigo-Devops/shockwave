@@ -272,6 +272,33 @@ class BillingAddressViewSet(viewsets.ModelViewSet):
     serializer_class = BillingAddressSerializer
     queryset = BillingAddress.objects.all()
 
+    def get(self, request):
+        user_id = get_member_id(request)
+        billing_address = self.request.query_params.get(user_id=user_id)
+        billing_address_detail = BillingAddressSerializer(instance=billing_address, read_only=True, many=False)
+        billing_address_details = billing_address_detail.data
+        return Response(billing_address_details, status.HTTP_200_OK)
+
+    def put(self, request):
+        user_id = get_member_id(request)
+        billing_address = BillingAddress.objects.get(user_id=user_id)
+        serializer = BillingAddressSerializer(instance=billing_address, data=request.data, partial=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request):
+        user_id = get_member_id(request)
+        billing_address = BillingAddress.objects.get(user_id=user_id)
+        serializer = BillingAddressSerializer(instance=billing_address, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+
 
 class DeviceViewSet(viewsets.ModelViewSet):
     serializer_class = DeviceSerializer
@@ -468,7 +495,7 @@ def payment_method_creation(request):
             PaymentMethod.objects.create(payment_id=payment_id, user_id=user_id)
             return Response('Payment method saved successfully', status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+            return Response({"error_message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -478,9 +505,7 @@ def payment_method_initialized(request):
         if request.method == "POST":
             device_serial_no = request.data.get('device_serial_no')
             device_name = request.data.get('device_name')
-            # stripe_customer_id = request.data.get('stripe_customer_id')  ## need to take customer_id against the
-            # user from user_profile table
-            payment_method_id = request.data.get('payment_method_id')  ## user based  filter need to done
+            payment_method_id = request.data.get('payment_method_id')
             start_date = datetime.date.today()
             end_date = start_date + datetime.timedelta(days=30)
             user_id = get_member_id(request)
@@ -488,16 +513,16 @@ def payment_method_initialized(request):
             user_profile = UserProfile.objects.get(user_id=user_id)
             stripe_customer_id = user_profile.stripe_customer_id
             if payment_method_id:
-                payment_method = PaymentMethod.objects.get(pk=payment_method_id, user_id=user_id)
+                payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by('-created_at').first()
             else:
-                payment_method = PaymentMethod.objects.filter(user_id=user_id).first()
+                payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
             stripe_payment_id = payment_method.payment_id
             if device_serial_no and device_name and stripe_customer_id:
                 stripe_product_id = create_product(product_name=device_serial_no,
-                                                   description=f'The {device_name},{device_serial_no} device is registered.')[
-                    'id']
+                                                   description=f'The {device_name},{device_serial_no} device is '
+                                                               f'registered.')['id']
                 stripe_product_price_id = \
-                    create_price(amount=25, currency='usd', interval='month', product_id=stripe_product_id)['id']
+                    create_price(amount=2500, currency='usd', interval='month', product_id=stripe_product_id)['id']
                 stripe_Subscription_id = \
                     create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id)['id']
                 # need to register the device in our table
@@ -506,9 +531,10 @@ def payment_method_initialized(request):
                 subscription = Subscription.objects.create(status=True, device_id=register_device, user_id=user,
                                                            payment_method_id=payment_method,
                                                            stripe_payment_id=stripe_payment_id,
+                                                           stripe_subscription_id=stripe_Subscription_id,
                                                            stripe_customer_id=stripe_customer_id, start_date=start_date,
                                                            end_date=end_date)
                 return Response({"message": "success"}, status=status.HTTP_200_OK)
             return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
-        return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+        return Response({"error_message": str(e)}, status=status.HTTP_400_BAD_REQUEST)

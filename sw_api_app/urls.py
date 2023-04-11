@@ -25,5 +25,8 @@ urlpatterns = [
     path('my_profile/', UserView.as_view()),
     path('registered_list', views.previous_connected_list),
     path('device_session_history/', views.device_session_history),
-    path('payment_method_create/', views.payment_method_creation)
+    path('payment_method_create/', views.payment_method_creation),
+    path('payment_method_attachment/', views.payment_method_attachment),
+    path('payment_method_list/', views.my_payment_method)
+
 ]

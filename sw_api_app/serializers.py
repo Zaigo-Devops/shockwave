@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 
-from sw_admin_app.models import UserProfile, BillingAddress, Device
+from sw_admin_app.models import UserProfile, BillingAddress, Device, Subscription
 from .stripe import create_payment_customer
 from sw_api_app.utils import get_attachment_from_name
 
@@ -95,4 +95,10 @@ class BillingAddressSerializer(serializers.ModelSerializer):
 class DeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Device
+        fields = "__all__"
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subscription
         fields = "__all__"

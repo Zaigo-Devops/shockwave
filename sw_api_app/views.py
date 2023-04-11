@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
-    BillingAddressSerializer, DeviceSerializer
+    BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
     create_address
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name
@@ -277,6 +277,11 @@ class DeviceViewSet(viewsets.ModelViewSet):
     queryset = Device.objects.all()
 
 
+class SubscriptionViewSet(viewsets.ModelViewSet):
+    serializer_class = SubscriptionSerializer
+    queryset = Subscription.objects.all()
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def session_setup(request):
@@ -305,7 +310,8 @@ def session_setup(request):
                                                                     state=state, country=country,
                                                                     pin_code=pin_code, latitude=latitude,
                                                                     longitude=longitude)
-                            return Response({'message': 'Session Created Successfully'}, status=status.HTTP_200_OK)
+                            return Response({'message': 'Session Created Successfully', 'session_id': session_create.pk}
+                                            , status=status.HTTP_200_OK)
                         else:
                             return Response({'message': 'Please provide valid data information'},
                                             status=status.HTTP_400_BAD_REQUEST)
@@ -334,6 +340,9 @@ def cancel_registration(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def session_data_save(request, session_id):
+    """
+    Api for save the session data history against the respective user,device and session.
+    """
     data = request.data
     session_data = data.get('session_data', None)
     device_serial_no = data.get('device_serial_no', None)
@@ -342,13 +351,18 @@ def session_data_save(request, session_id):
         device = Device.objects.filter(device_serial_no=device_serial_no).first()
         user = User.objects.filter(pk=user_id).first()
         session = Session.objects.filter(pk=session_id).first()
+        # session data value provide as list so save as json with key "energy_levels"
         energy_list = session_data['energy_levels']
+        # In list take overall minimum and maximum for a session by using below function.
         low_energy_level = min(energy_list)
         high_energy_level = max(energy_list)
-        session_data = SessionData.objects.create(energy_data=session_data, lowest_energy_level=low_energy_level,
+        session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
                                                   highest_energy_level=high_energy_level, session_id=session,
                                                   device_id=device, user_id=user)
-        return Response({'message': "Session Data Save Successfully"}, status=status.HTTP_200_OK)
+        return Response({"message": "Session Data Save Successfully", "session_id": session.pk,
+                         "energy_levels": session_data.energy_data,
+                         "highest_energy_level": session_data.highest_energy_level,
+                         "lowest_energy_level": session_data.lowest_energy_level}, status=status.HTTP_200_OK)
     else:
         return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -418,17 +432,25 @@ def previous_connected_list(request):
 def device_session_history(request):
     user_id = get_member_id(request)
     device_serial_no = request.data.get('device_serial_no', None)
+    start_date = request.data.get('start_date', None)
+    end_date = request.data.get('end_date', None)
     limit = request.GET.get('per_page', 9)
     page_number = request.GET.get('page', 1)
     current_url = f'{request.build_absolute_uri()}'
     extras = {
         "per_page": limit
     }
+    if start_date and not end_date:
+        return Response("please provide End_date")
+    if not start_date and end_date:
+        return Response("please provide Start_date")
     device_id_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
     if device_id_list:
         sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
         if device_serial_no:
             sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no).order_by('created_at')
+        if start_date and end_date:
+            sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
         response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
         response['data'] = generate_user_cards(response['data'], True)
         return Response(response, status=status.HTTP_200_OK)

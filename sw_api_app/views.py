@@ -453,7 +453,7 @@ def previous_connected_list(request):
                 final_list.append(registered_list)
             return Response(final_list, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('No Devices !!', status=status.HTTP_204_NO_CONTENT), print(str(e))
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -509,13 +509,13 @@ def payment_method_creation(request):
             created_payment_method_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year,
                                                               card_cvc,
                                                               name, email, address)
-            payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id, user_id=user_id)
-            BillingAddress.objects.create(name=name, user_id=user_id, line_1=line1, line_2=line2, city=city,
+            payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id, user_id_id=user_id)
+            BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2, city=city,
                                           state=state, country=country, pin_code=postal_code)
             return Response({'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id},
                             status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -531,7 +531,7 @@ def payment_method_attachment(request):
             attach_payment_method(payment_customer_id, payment_method_id)
             return Response('Payment method attachment created successfully', status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST), print(str(e))
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -543,7 +543,7 @@ def my_payment_method(request):
             payment_method_list = PaymentMethod.objects.filter(user_id=user_id).values()
             return Response(payment_method_list, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"error_message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -561,7 +561,8 @@ def payment_method_initialized(request):
             user_profile = UserProfile.objects.get(user_id=user_id)
             stripe_customer_id = user_profile.stripe_customer_id
             if payment_method_id:
-                payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by('-created_at').first()
+                payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
+                    '-created_at').first()
             else:
                 payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
             stripe_payment_id = payment_method.payment_id
@@ -587,6 +588,7 @@ def payment_method_initialized(request):
     except Exception as e:
         return Response({"error_message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def delete_payment_method(request):
@@ -596,5 +598,4 @@ def delete_payment_method(request):
             PaymentMethod.objects.filter(user_id=user_id).delete()
             return Response('Payment method deleted successfully', status=status.HTTP_200_OK)
         except Exception as e:
-            return Response('Error Occurred', status=status.HTTP_400_BAD_REQUEST)
-
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)

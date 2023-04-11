@@ -37,21 +37,21 @@ def retrieve_payment_customer(customer_id):
 
 
 def create_payment_method(card_type, card_number, card_exp_month, card_exp_year, card_cvc, name, email, address):
-    payment_method = stripe.PaymentMethod.create(
-        type=card_type,
-        card={
-            "number": card_number,
-            "exp_month": card_exp_month,
-            "exp_year": card_exp_year,
-            "cvc": card_cvc
-        },
-        billing_details={
-            "name": name,
-            "email": email,
-            "address": address
-        }
-    )
-    return payment_method
+        payment_method = stripe.PaymentMethod.create(
+            type=card_type,
+            card={
+                "number": card_number,
+                "exp_month": card_exp_month,
+                "exp_year": card_exp_year,
+                "cvc": card_cvc
+            },
+            billing_details={
+                "name": name,
+                "email": email,
+                "address": address
+            }
+        )
+        return payment_method
 
 
 def create_address(line1, line2, city, state, postal_code, country):
@@ -67,11 +67,11 @@ def create_address(line1, line2, city, state, postal_code, country):
 
 
 def attach_payment_method(customer_id, payment_method_id):
-    attach_payment = stripe.PaymentMethod.attach(
-        payment_method_id,
-        customer=customer_id,
-    )
-    return attach_payment
+        attach_payment = stripe.PaymentMethod.attach(
+            payment_method_id,
+            customer=customer_id,
+        )
+        return attach_payment
 
 
 def create_product(product_name, description):

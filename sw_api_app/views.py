@@ -481,7 +481,8 @@ def payment_method_creation(request):
             created_payment_method_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year,
                                                               card_cvc,
                                                               name, email, address)
-            payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id, user_id_id=user_id)
+            payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id['id'],
+                                                             user_id_id=user_id)
             BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2, city=city,
                                           state=state, country=country, pin_code=postal_code)
             return Response({'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id},
@@ -500,7 +501,7 @@ def payment_method_attachment(request):
             email = request.data.get('email')
             address = request.data.get('address', None)
             payment_customer_id = create_payment_customer(name, email, address)
-            attach_payment_method(payment_customer_id, payment_method_id)
+            attach_payment_method(payment_customer_id['id'], payment_method_id)
             return Response('Payment method attachment created successfully', status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)

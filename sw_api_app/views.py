@@ -341,7 +341,9 @@ def session_setup(request):
                                                                     state=state, country=country,
                                                                     pin_code=pin_code, latitude=latitude,
                                                                     longitude=longitude)
-                            return Response({'message': 'Session Created Successfully', 'session_id': session_create.pk}, status=status.HTTP_200_OK)
+                            return Response(
+                                {'message': 'Session Created Successfully', 'session_id': session_create.pk},
+                                status=status.HTTP_200_OK)
                         else:
                             return Response({'message': 'Please provide valid data information'},
                                             status=status.HTTP_400_BAD_REQUEST)
@@ -566,8 +568,7 @@ def payment_method_initialized(request):
                 stripe_Subscription_id = \
                     create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
                                         default_payment_method=stripe_payment_id)
-                # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
-
+                payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
                 # need to register the device in our table
                 register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
                                                         device_price_id=stripe_product_price_id)
@@ -577,7 +578,8 @@ def payment_method_initialized(request):
                                                            stripe_subscription_id=stripe_Subscription_id['id'],
                                                            stripe_customer_id=stripe_customer_id, start_date=start_date,
                                                            end_date=end_date)
-                return Response({"message": "success"}, status=status.HTTP_200_OK)
+                return Response({"message": "success", "payment_intent_id":payment_intent['id']
+                                 }, status=status.HTTP_200_OK)
             return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         return Response({"error_message": str(e)}, status=status.HTTP_400_BAD_REQUEST)

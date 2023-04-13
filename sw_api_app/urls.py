@@ -24,7 +24,7 @@ urlpatterns = [
     path('create_super_user/', views.save_users),
     path('my_profile/', UserView.as_view()),
     path('registered_list', views.previous_connected_list),
-    path('device_session_history/', views.device_session_history),
+    path('device_session_data_history/', views.device_session_data_history),
     path('payment_method_create/', views.payment_method_creation),
     path('payment_method_initialized/', views.payment_method_initialized),
     path('payment_method_list/', views.my_payment_method),

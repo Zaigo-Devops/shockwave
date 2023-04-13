@@ -43,6 +43,7 @@ class Session(models.Model):
     latitude = models.CharField(max_length=256, blank=True, null=True, default=None)
     longitude = models.CharField(max_length=256, blank=True, null=True, default=None)
     device_name = models.CharField(max_length=256, null=True, blank=True)
+    session_end_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

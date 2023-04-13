@@ -117,6 +117,7 @@ def generate_user_card(obj):
         "session_data_id": obj.pk,
         "device_serial_no": obj.device_id.device_serial_no,
         "device_name": obj.device_id.device_name,
+        "session_id": obj.session_id.pk,
         "environment": obj.session_id.environment,
         "location": obj.session_id.location,
         "energy_levels": obj.energy_data,

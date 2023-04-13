@@ -391,6 +391,8 @@ def session_data_save(request, session_id):
         session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
                                                   highest_energy_level=high_energy_level, session_id=session,
                                                   device_id=device, user_id=user)
+        end_date = session_data.created_at
+        Session.objects.filter(pk=session_id).update(session_end_date=end_date)
         return Response({"message": "Session Data Save Successfully"}, status=status.HTTP_200_OK)
     else:
         return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
@@ -455,11 +457,12 @@ def previous_connected_list(request):
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def device_session_history(request):
+def device_session_data_history(request):
     user_id = get_member_id(request)
     device_serial_no = request.data.get('device_serial_no', None)
+    session_id = request.data.get('session_id', None)
     start_date = request.data.get('start_date', None)
     end_date = request.data.get('end_date', None)
     limit = request.GET.get('per_page', 9)
@@ -475,8 +478,8 @@ def device_session_history(request):
     device_id_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
     if device_id_list:
         sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
-        if device_serial_no:
-            sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no).order_by('created_at')
+        if device_serial_no and session_id:
+            sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no, session_id__id=session_id).order_by('created_at')
         if start_date and end_date:
             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
         response = get_paginated_response(sub_device, current_url, page_number, limit, extras)

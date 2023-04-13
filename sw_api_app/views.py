@@ -398,24 +398,47 @@ def session_data_save(request, session_id):
         return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def session_list(request, device_id):
-    user_id = get_member_id(request)
-    location = request.GET.get('location', None)
-    start_date = request.GET.get('start_date', None)
-    end_date = request.GET.get('end_date', None)
-    if start_date and not end_date:
-        return Response("please provide End_date")
-    if not start_date and end_date:
-        return Response("please provide Start_date")
-    session = Session.objects.filter(device_id=device_id, user_id=user_id)
-    if start_date and end_date:
-        session = session.filter(created_at__range=(start_date, end_date))
-    if location:
-        session = session.filter(location__icontains=location)
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def session_list(request, device_id):
+#     user_id = get_member_id(request)
+#     location = request.GET.get('location', None)
+#     start_date = request.GET.get('start_date', None)
+#     end_date = request.GET.get('end_date', None)
+#     if start_date and not end_date:
+#         return Response("please provide End_date")
+#     if not start_date and end_date:
+#         return Response("please provide Start_date")
+#     session = Session.objects.filter(device_id=device_id, user_id=user_id)
+#     if start_date and end_date:
+#         session = session.filter(created_at__range=(start_date, end_date))
+#     if location:
+#         session = session.filter(location__icontains=location)
+#
+#     return Response(session.values())
 
-    return Response(session.values())
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def session_list(request):
+    if request.method == 'POST':
+        user_id = get_member_id(request)
+        start_date = request.GET.get('start_date', None)
+        end_date = request.GET.get('end_date', None)
+        device_id = request.GET.get('device_id', None)
+        if start_date and not end_date:
+            return Response("please provide End_date")
+        if not start_date and end_date:
+            return Response("please provide Start_date")
+        session = Session.objects.filter(device_id=device_id, user_id=user_id)
+        # if start_date and end_date:
+        # session_data = session.filter(created_at__range=(start_date, end_date))
+        device_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
+        sessions = Session.objects.filter(device_id__in=device_list).values_list('id')
+        max_values = []
+        for session in sessions:
+            max_values.append(
+                max(SessionData.objects.filter(session_id=session).values_list('highest_energy_level', flat=True)))
+        return Response(max_values)
 
 
 @api_view(['POST'])
@@ -588,7 +611,7 @@ def payment_method_initialized(request):
                                                            stripe_subscription_id=stripe_Subscription_id['id'],
                                                            stripe_customer_id=stripe_customer_id, start_date=start_date,
                                                            end_date=end_date)
-                return Response({"message": "success", "payment_intent_id":payment_intent['id']
+                return Response({"message": "success", "payment_intent_id": payment_intent['id']
                                  }, status=status.HTTP_200_OK)
             return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
     except Exception as e:

@@ -341,7 +341,9 @@ def session_setup(request):
                                                                     state=state, country=country,
                                                                     pin_code=pin_code, latitude=latitude,
                                                                     longitude=longitude)
-                            return Response({'message': 'Session Created Successfully', 'session_id': session_create.pk}, status=status.HTTP_200_OK)
+                            return Response(
+                                {'message': 'Session Created Successfully', 'session_id': session_create.pk},
+                                status=status.HTTP_200_OK)
                         else:
                             return Response({'message': 'Please provide valid data information'},
                                             status=status.HTTP_400_BAD_REQUEST)
@@ -563,9 +565,15 @@ def payment_method_initialized(request):
                                                                f'registered.')['id']
                 stripe_product_price_id = \
                     create_price(amount=2500, currency='usd', interval='month', product_id=stripe_product_id)['id']
+                # stripe_product_price_id = \
+                #     create_price(amount=2500, currency='usd', interval='day', product_id=stripe_product_id)['id']
                 stripe_Subscription_id = \
                     create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
                                         default_payment_method=stripe_payment_id)
+
+                # Pay Latest Invoice of Subscription
+                # stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
+
                 # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
 
                 # need to register the device in our table
@@ -593,3 +601,18 @@ def delete_payment_method(request):
             return Response('Payment method deleted successfully', status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    user = request.user
+    old_password = request.data.get('old_password')
+    new_password = request.data.get('new_password')
+
+    if not user.check_password(old_password):
+        return Response({'error': 'Incorrect old password'}, status=status.HTTP_400_BAD_REQUEST)
+    user.set_password(new_password)
+    user.save()
+
+    return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)

@@ -27,5 +27,6 @@ urlpatterns = [
     path('device_session_history/', views.device_session_history),
     path('payment_method_create/', views.payment_method_creation),
     path('payment_method_initialized/', views.payment_method_initialized),
-    path('payment_method_list/', views.my_payment_method)
+    path('payment_method_list/', views.my_payment_method),
+    path('change_password/', views.change_password)
 ]

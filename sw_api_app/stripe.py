@@ -23,11 +23,23 @@ def create_customer(request):
         return Response({'message': 'Customer created successfully', })
 
 
-def create_payment_customer(name, email, phone=None):
+# def create_payment_customer(name, email, phone=None):
+#     customer = stripe.Customer.create(
+#         name=name,
+#         email=email,
+#         phone=phone
+#     )
+#     return customer
+
+def create_payment_customer(name, email, payment_method=None, phone=None):
     customer = stripe.Customer.create(
         name=name,
         email=email,
-        phone=phone
+        phone=phone,
+        payment_method=payment_method
+        # invoice_settings={
+        #     "default_payment_method": payment_method_id,  payment_method_id=None
+        # },
     )
     return customer
 
@@ -37,21 +49,21 @@ def retrieve_payment_customer(customer_id):
 
 
 def create_payment_method(card_type, card_number, card_exp_month, card_exp_year, card_cvc, name, email, address):
-        payment_method = stripe.PaymentMethod.create(
-            type=card_type,
-            card={
-                "number": card_number,
-                "exp_month": card_exp_month,
-                "exp_year": card_exp_year,
-                "cvc": card_cvc
-            },
-            billing_details={
-                "name": name,
-                "email": email,
-                "address": address
-            }
-        )
-        return payment_method
+    payment_method = stripe.PaymentMethod.create(
+        type=card_type,
+        card={
+            "number": card_number,
+            "exp_month": card_exp_month,
+            "exp_year": card_exp_year,
+            "cvc": card_cvc
+        },
+        billing_details={
+            "name": name,
+            "email": email,
+            "address": address
+        }
+    )
+    return payment_method
 
 
 def create_address(line1, line2, city, state, postal_code, country):
@@ -67,11 +79,11 @@ def create_address(line1, line2, city, state, postal_code, country):
 
 
 def attach_payment_method(customer_id, payment_method_id):
-        attach_payment = stripe.PaymentMethod.attach(
-            payment_method_id,
-            customer=customer_id,
-        )
-        return attach_payment
+    attach_payment = stripe.PaymentMethod.attach(
+        payment_method_id,
+        customer=customer_id,
+    )
+    return attach_payment
 
 
 def create_product(product_name, description):
@@ -89,7 +101,7 @@ def create_price(amount, currency, interval, product_id):
     return price
 
 
-def create_subscription(customer_id, price_id):
+def create_subscription(customer_id, default_payment_method, price_id):
     subscription = stripe.Subscription.create(
         customer=customer_id,
         items=[
@@ -97,9 +109,10 @@ def create_subscription(customer_id, price_id):
                 "price": price_id,
             },
         ],
-        payment_behavior="default_incomplete",
-        collection_method="charge_automatically"
-        # expand=["latest_invoice.payment_intent"],
+        # payment_behavior="allow_incomplete",
+        collection_method="charge_automatically",
+        default_payment_method=default_payment_method,
+        expand=["latest_invoice.payment_intent"],
     )
     return subscription
 

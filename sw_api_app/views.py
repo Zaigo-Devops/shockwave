@@ -1,6 +1,7 @@
 import datetime
 from datetime import timedelta
 
+import stripe
 from django.contrib.auth.models import User
 
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
@@ -125,7 +126,8 @@ class LoginView(APIView):
                 user_name = f"{user.first_name} {user.last_name}"
                 user_profile_serializer = UserProfileSerializer(
                     data={"user_id": user.pk, "user_profile_image": get_attachment_from_name(user_name),
-                          "stripe_customer_id": customer_create['id']})
+                          "stripe_customer_id": customer_create['id']
+                          })
                 if user_profile_serializer.is_valid():
                     user_profile_serializer.save()
             if hasattr(user, "user_profile"):
@@ -328,7 +330,7 @@ def session_setup(request):
         longitude = data.get('longitude', None)
         try:
             if device_serial_no:
-                is_device = Device.objects.get(device_serial_no=device_serial_no)
+                is_device = Device.objects.filter(device_serial_no=device_serial_no).first()
                 if is_device:
                     is_subscribed = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, status=1)
                     if is_subscribed:
@@ -339,8 +341,7 @@ def session_setup(request):
                                                                     state=state, country=country,
                                                                     pin_code=pin_code, latitude=latitude,
                                                                     longitude=longitude)
-                            return Response({'message': 'Session Created Successfully', 'session_id': session_create.pk}
-                                            , status=status.HTTP_200_OK)
+                            return Response({'message': 'Session Created Successfully', 'session_id': session_create.pk}, status=status.HTTP_200_OK)
                         else:
                             return Response({'message': 'Please provide valid data information'},
                                             status=status.HTTP_400_BAD_REQUEST)
@@ -388,10 +389,7 @@ def session_data_save(request, session_id):
         session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
                                                   highest_energy_level=high_energy_level, session_id=session,
                                                   device_id=device, user_id=user)
-        return Response({"message": "Session Data Save Successfully", "session_id": session.pk,
-                         "energy_levels": session_data.energy_data,
-                         "highest_energy_level": session_data.highest_energy_level,
-                         "lowest_energy_level": session_data.lowest_energy_level}, status=status.HTTP_200_OK)
+        return Response({"message": "Session Data Save Successfully"}, status=status.HTTP_200_OK)
     else:
         return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -505,19 +503,23 @@ def payment_method_creation(request):
             country = request.data.get('country', None)
             address = create_address(line1, line2, city, state, postal_code, country)
             user_id = get_member_id(request)
+            user = User.objects.get(pk=user_id)
             user_profile = UserProfile.objects.get(user_id=user_id)
             stripe_customer_id = user_profile.stripe_customer_id
             created_payment_method_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year,
                                                               card_cvc,
                                                               name, email, address)
+
             payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id['id'],
                                                              user_id_id=user_id)
             attach_payment_method(stripe_customer_id, created_payment_method_id['id'])
+            customer_update = stripe.Customer.modify(stripe_customer_id,
+                                                     invoice_settings={
+                                                         'default_payment_method': created_payment_method_id['id']})
             BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2, city=city,
                                           state=state, country=country, pin_code=postal_code)
             return Response(
-                {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id,
-                 '---': created_payment_method_id},
+                {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
                 status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -561,14 +563,18 @@ def payment_method_initialized(request):
                                                                f'registered.')['id']
                 stripe_product_price_id = \
                     create_price(amount=2500, currency='usd', interval='month', product_id=stripe_product_id)['id']
-                stripe_Subscription_id = create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id)['id']
+                stripe_Subscription_id = \
+                    create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
+                                        default_payment_method=stripe_payment_id)
+                # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
+
                 # need to register the device in our table
                 register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
                                                         device_price_id=stripe_product_price_id)
                 subscription = Subscription.objects.create(status=True, device_id=register_device, user_id=user,
                                                            payment_method_id=payment_method,
                                                            stripe_payment_id=stripe_payment_id,
-                                                           stripe_subscription_id=stripe_Subscription_id,
+                                                           stripe_subscription_id=stripe_Subscription_id['id'],
                                                            stripe_customer_id=stripe_customer_id, start_date=start_date,
                                                            end_date=end_date)
                 return Response({"message": "success"}, status=status.HTTP_200_OK)

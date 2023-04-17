@@ -420,6 +420,7 @@ def session_data_save(request, session_id):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def session_list(request):
+
     if request.method == 'POST':
         user_id = get_member_id(request)
         start_date = request.GET.get('start_date', None)
@@ -609,8 +610,7 @@ def payment_method_initialized(request):
                                                            stripe_subscription_id=stripe_Subscription_id['id'],
                                                            stripe_customer_id=stripe_customer_id, start_date=start_date,
                                                            end_date=end_date)
-                return Response({"message": "success", "payment_intent_id": payment_intent['id']
-                                 }, status=status.HTTP_200_OK)
+                return Response({"message": "success"}, status=status.HTTP_200_OK)
             return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         return Response({"error_message": str(e)}, status=status.HTTP_400_BAD_REQUEST)

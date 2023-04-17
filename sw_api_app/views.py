@@ -591,14 +591,12 @@ def payment_method_initialized(request):
                                                                f'registered.')['id']
                 stripe_product_price_id = \
                     create_price(amount=2500, currency='usd', interval='month', product_id=stripe_product_id)['id']
-                # stripe_product_price_id = \
-                #     create_price(amount=2500, currency='usd', interval='day', product_id=stripe_product_id)['id']
                 stripe_Subscription_id = \
                     create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
                                         default_payment_method=stripe_payment_id)
 
                 # Pay Latest Invoice of Subscription
-                # stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
+                stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
 
                 # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
                 payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')

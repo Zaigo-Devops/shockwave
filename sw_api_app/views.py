@@ -1,8 +1,10 @@
 import datetime
 from datetime import timedelta
+from itertools import count
 
 import stripe
 from django.contrib.auth.models import User
+from django.db.models import Max
 
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
     UserProfile
@@ -417,29 +419,76 @@ def session_data_save(request, session_id):
 #
 #     return Response(session.values())
 
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def session_list(request):
+#     if request.method == 'POST':
+#     user_id = get_member_id(request)
+#     start_date = request.data.get('start_date', None)
+#     end_date = request.data.get('end_date', None)
+#     device_id = request.data.get('device_id', None)
+#     if start_date and not end_date:
+#         return Response("please provide End_date")
+#     if not start_date and end_date:
+#         return Response("please provide Start_date")
+#     if start_date and end_date:
+#         device_list = Subscription.objects.filter(user_id=user_id, status=1, device_id=device_id).values_list(
+#             'device_id', flat=True)
+#         sessions = Session.objects.filter(device_id__in=device_list,
+#                                           created_at__range=(start_date, end_date)).values_list('id', flat=True)
+#         environment_type = Session.objects.filter(device_id__in=device_list).first().environment
+#         max_values = []
+#         for session in sessions:
+#             session_data = {}
+#             data = SessionData.objects.filter(session_id=session).aggregate(Max('highest_energy_level')).values(
+#                 'created_at', 'highest_energy_level__max')
+#
+#             # data = SessionData.objects.filter(session_id=session).values('created_at').annotate(max=Max(
+#             # 'highest_energy_level'))
+#             print(data)
+#         return Response(
+#             {'device': device_id, 'date': f"{start_date} to {end_date}", 'no_of_section': len(sessions),
+#              'environment_type': environment_type})
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def session_list(request):
-
     if request.method == 'POST':
-        user_id = get_member_id(request)
-        start_date = request.GET.get('start_date', None)
-        end_date = request.GET.get('end_date', None)
-        device_id = request.GET.get('device_id', None)
-        if start_date and not end_date:
-            return Response("please provide End_date")
-        if not start_date and end_date:
-            return Response("please provide Start_date")
-        session = Session.objects.filter(device_id=device_id, user_id=user_id)
-        # if start_date and end_date:
-        # session_data = session.filter(created_at__range=(start_date, end_date))
-        device_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
-        sessions = Session.objects.filter(device_id__in=device_list).values_list('id')
-        max_values = []
-        for session in sessions:
-            max_values.append(
-                max(SessionData.objects.filter(session_id=session).values_list('highest_energy_level', flat=True)))
-        return Response(max_values)
+        try:
+            user_id = get_member_id(request)
+            device_serial_no = request.data.get('device_serial_no', None)
+            start_date = request.data.get('start_date', None)
+            end_date = request.data.get('end_date', None)
+            if start_date and not end_date:
+                return Response("please provide End_date")
+            if not start_date and end_date:
+                return Response("please provide Start_date")
+            from_date_time_obj = timezone.datetime.strptime(start_date, "%Y-%m-%d")
+            end_date_time_obj = timezone.datetime.strptime(end_date, "%Y-%m-%d")
+            date_range = end_date_time_obj - from_date_time_obj
+            dates = list()
+            for days in range(0, date_range.days + 1):
+                dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
+            device_id = Device.objects.filter(device_serial_no=device_serial_no).first().id
+            date_values = {}
+            for date in dates:
+                from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
+                to_date = from_date + timedelta(hours=23, minutes=59)
+                sessions = Session.objects.filter(device_id=device_id, user_id=user_id,
+                                                  created_at__range=(from_date, to_date))
+                values_list = []
+                for session in sessions:
+                    sub_values = {}
+                    data = SessionData.objects.filter(session_id=session).values_list('highest_energy_level', flat=True)
+                    if data:
+                        sub_values['session'] = session.pk
+                        sub_values['session_environment'] = session.environment
+                        sub_values['maximum_value'] = max(data)
+                        values_list.append(sub_values)
+                date_values[str(from_date)] = values_list
+            return Response(date_values, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -503,7 +552,8 @@ def device_session_data_history(request):
     if device_id_list:
         sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
         if device_serial_no and session_id:
-            sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no, session_id__id=session_id).order_by('created_at')
+            sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no,
+                                           session_id__id=session_id).order_by('created_at')
         if start_date and end_date:
             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
         response = get_paginated_response(sub_device, current_url, page_number, limit, extras)

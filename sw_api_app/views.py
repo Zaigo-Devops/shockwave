@@ -352,10 +352,11 @@ def session_setup(request):
                         return Response({"message": "No Subscription is Active for this device, Please do payment for "
                                                     "further process "}, status=status.HTTP_204_NO_CONTENT)
                 else:
-                    return Response({"message": "Device not found,please provide valid device id"}, status=status.HTTP_204_NO_CONTENT)
+                    return Response({"message": "Device not found,please provide valid device id"},
+                                    status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         return Response({"message": "Failed, to setup the session", "reason": str(e)},
-                            status=status.HTTP_400_BAD_REQUEST)
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -557,7 +558,8 @@ def payment_method_creation(request):
                 {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
                 status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'status': "failure", "error": str(e), 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status': "failure", "error": str(e), 'message': str(e)},
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -646,3 +648,36 @@ def change_password(request):
     user.save()
 
     return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_session_detail_history_for_graph(request):
+    device_serial_no = request.data.get('device_serial_no')
+    member_id = get_member_id(request)
+    if not device_serial_no:
+        return Response({"status": "failure", "error": "Device Serial Number is required"}, status.HTTP_400_BAD_REQUEST)
+
+    devices = Device.objects.filter(device_serial_no=device_serial_no).values_list('pk', flat=True)
+
+    subscription = Subscription.objects.filter(device_id__in=devices, user_id=member_id, status=1).order_by(
+        '-created_at').first()
+
+    active_device_id = subscription.device_id
+
+    # if session_id:
+
+    session_id = request.data.get('session_id', None)
+
+    if session_id:
+        params = {
+            "device_id": active_device_id,
+            "session_id": session_id
+        }
+    else:
+        params = {
+            "device_id": active_device_id
+        }
+
+    session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
+    return Response(session_data, status.HTTP_200_OK)

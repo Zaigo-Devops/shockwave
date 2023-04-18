@@ -29,5 +29,6 @@ urlpatterns = [
     path('payment_method_initialized/', views.payment_method_initialized),
     path('payment_method_list/', views.my_payment_method),
     path('change_password/', views.change_password),
-    path('pdf_export/', views.export_session_data_history)
+    path('pdf_export/', views.export_session_data_history_as_pdf),
+    path('session_data_detailed_history/', views.get_session_detail_history_for_graph)
 ]

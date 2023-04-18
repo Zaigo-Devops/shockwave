@@ -1,9 +1,9 @@
 import datetime
 from datetime import timedelta
+from itertools import count
 
 import stripe
 from django.contrib.auth.models import User
-from django.shortcuts import render
 
 from SHOCK_WAVE import settings
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
@@ -430,44 +430,76 @@ def session_data_save(request, session_id):
 #
 #     return Response(session.values())
 
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def session_list(request):
+#     if request.method == 'POST':
+#     user_id = get_member_id(request)
+#     start_date = request.data.get('start_date', None)
+#     end_date = request.data.get('end_date', None)
+#     device_id = request.data.get('device_id', None)
+#     if start_date and not end_date:
+#         return Response("please provide End_date")
+#     if not start_date and end_date:
+#         return Response("please provide Start_date")
+#     if start_date and end_date:
+#         device_list = Subscription.objects.filter(user_id=user_id, status=1, device_id=device_id).values_list(
+#             'device_id', flat=True)
+#         sessions = Session.objects.filter(device_id__in=device_list,
+#                                           created_at__range=(start_date, end_date)).values_list('id', flat=True)
+#         environment_type = Session.objects.filter(device_id__in=device_list).first().environment
+#         max_values = []
+#         for session in sessions:
+#             session_data = {}
+#             data = SessionData.objects.filter(session_id=session).aggregate(Max('highest_energy_level')).values(
+#                 'created_at', 'highest_energy_level__max')
+#
+#             # data = SessionData.objects.filter(session_id=session).values('created_at').annotate(max=Max(
+#             # 'highest_energy_level'))
+#             print(data)
+#         return Response(
+#             {'device': device_id, 'date': f"{start_date} to {end_date}", 'no_of_section': len(sessions),
+#              'environment_type': environment_type})
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def session_list(request):
     if request.method == 'POST':
-        user_id = get_member_id(request)
-        device_serial_no = request.data.get('device_serial_no', None)
-        start_date = request.data.get('start_date', None)
-        end_date = request.data.get('end_date', None)
-        if start_date and not end_date:
-            return Response("please provide End_date")
-        if not start_date and end_date:
-            return Response("please provide Start_date")
-        from_date_time_obj = timezone.datetime.strptime(start_date, "%Y-%m-%d")
-        end_date_time_obj = timezone.datetime.strptime(end_date, "%Y-%m-%d")
-        date_range = end_date_time_obj - from_date_time_obj
-        dates = list()
-        for days in range(1, date_range.days + 1):
-            dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
-        device_id = Device.objects.filter(device_serial_no=device_serial_no).first().id
-        print("device_id", device_id, user_id)
-        session_list = {}
-        for date in dates:
-            from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
-            to_date = from_date + timedelta(hours=23, minutes=59)
-            session = Session.objects.filter(device_id=device_id, user_id=user_id,
-                                             created_at__range=(from_date, to_date))
-            print('session', session)
-            break
-        # session = Session.objects.filter(device_id=device_id, user_id=user_id)
-        # # if start_date and end_date:
-        # # session_data = session.filter(created_at__range=(start_date, end_date))
-        # device_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
-        # sessions = Session.objects.filter(device_id__in=device_list).values_list('id')
-        # max_values = []
-        # for session in sessions:
-        #     max_values.append(
-        #         max(SessionData.objects.filter(session_id=session).values_list('highest_energy_level', flat=True)))
-        return Response('max_values')
+        try:
+            user_id = get_member_id(request)
+            device_serial_no = request.data.get('device_serial_no', None)
+            start_date = request.data.get('start_date', None)
+            end_date = request.data.get('end_date', None)
+            if start_date and not end_date:
+                return Response("please provide End_date")
+            if not start_date and end_date:
+                return Response("please provide Start_date")
+            from_date_time_obj = timezone.datetime.strptime(start_date, "%Y-%m-%d")
+            end_date_time_obj = timezone.datetime.strptime(end_date, "%Y-%m-%d")
+            date_range = end_date_time_obj - from_date_time_obj
+            dates = list()
+            for days in range(0, date_range.days + 1):
+                dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
+            device_id = Device.objects.filter(device_serial_no=device_serial_no).first().id
+            date_values = {}
+            for date in dates:
+                from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
+                to_date = from_date + timedelta(hours=23, minutes=59)
+                sessions = Session.objects.filter(device_id=device_id, user_id=user_id,
+                                                  created_at__range=(from_date, to_date))
+                values_list = []
+                for session in sessions:
+                    sub_values = {}
+                    data = SessionData.objects.filter(session_id=session).values_list('highest_energy_level', flat=True)
+                    if data:
+                        sub_values['session'] = session.pk
+                        sub_values['session_environment'] = session.environment
+                        sub_values['maximum_value'] = max(data)
+                        values_list.append(sub_values)
+                date_values[str(from_date)] = values_list
+            return Response(date_values, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -671,10 +703,9 @@ def change_password(request):
 
     return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
 
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def export_session_data_history(request):
+def export_session_data_history_as_pdf(request):
     user_id = get_member_id(request)
     device_serial_no = request.data.get('device_serial_no', None)
     session_id = request.data.get('session_id', None)
@@ -737,3 +768,36 @@ def export_session_data_history(request):
             url = f'{settings.MY_DOMAIN}{file_name}'
             return Response({"url": url}, status.HTTP_200_OK)
     return Response({"data": "NO data"})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_session_detail_history_for_graph(request):
+    device_serial_no = request.data.get('device_serial_no')
+    member_id = get_member_id(request)
+    if not device_serial_no:
+        return Response({"status": "failure", "error": "Device Serial Number is required"}, status.HTTP_400_BAD_REQUEST)
+
+    devices = Device.objects.filter(device_serial_no=device_serial_no).values_list('pk', flat=True)
+
+    subscription = Subscription.objects.filter(device_id__in=devices, user_id=member_id, status=1).order_by(
+        '-created_at').first()
+
+    active_device_id = subscription.device_id
+
+    # if session_id:
+
+    session_id = request.data.get('session_id', None)
+
+    if session_id:
+        params = {
+            "device_id": active_device_id,
+            "session_id": session_id
+        }
+    else:
+        params = {
+            "device_id": active_device_id
+        }
+
+    session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
+    return Response(session_data, status.HTTP_200_OK)
+

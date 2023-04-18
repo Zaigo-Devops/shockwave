@@ -28,5 +28,6 @@ urlpatterns = [
     path('payment_method_create/', views.payment_method_creation),
     path('payment_method_initialized/', views.payment_method_initialized),
     path('payment_method_list/', views.my_payment_method),
-    path('change_password/', views.change_password)
+    path('change_password/', views.change_password),
+    path('session_data_detailed_history/', views.get_session_detail_history_for_graph)
 ]

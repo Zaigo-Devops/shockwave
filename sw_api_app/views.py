@@ -4,7 +4,6 @@ from itertools import count
 
 import stripe
 from django.contrib.auth.models import User
-from django.db.models import Max
 
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
     UserProfile
@@ -318,19 +317,19 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def session_setup(request):
-    if request.method == 'POST':
-        data = request.data
-        user_id = get_member_id(request)
-        environment = data.get('environment', None)
-        location = data.get('location', None)
-        device_serial_no = data.get('device_serial_no', None)
-        city = data.get('city', None)
-        state = data.get('state', None)
-        country = data.get('country', None)
-        pin_code = data.get('pin_code', None)
-        latitude = data.get('latitude', None)
-        longitude = data.get('longitude', None)
-        try:
+    try:
+        if request.method == 'POST':
+            data = request.data
+            user_id = get_member_id(request)
+            environment = data.get('environment', None)
+            location = data.get('location', None)
+            device_serial_no = data.get('device_serial_no', None)
+            city = data.get('city', None)
+            state = data.get('state', None)
+            country = data.get('country', None)
+            pin_code = data.get('pin_code', None)
+            latitude = data.get('latitude', None)
+            longitude = data.get('longitude', None)
             if device_serial_no:
                 is_device = Device.objects.filter(device_serial_no=device_serial_no).first()
                 if is_device:
@@ -352,9 +351,12 @@ def session_setup(request):
                     else:
                         return Response({"message": "No Subscription is Active for this device, Please do payment for "
                                                     "further process "}, status=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            return Response({"message": "Failed, to setup the session", "reason": str(e)},
-                            status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({"message": "Device not found,please provide valid device id"},
+                                    status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response({"message": "Failed, to setup the session", "reason": str(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -377,27 +379,30 @@ def session_data_save(request, session_id):
     """
     Api for save the session data history against the respective user,device and session.
     """
-    data = request.data
-    session_data = data.get('session_data', None)
-    device_serial_no = data.get('device_serial_no', None)
-    user_id = get_member_id(request)
-    if session_id and session_data and device_serial_no and user_id:
-        device = Device.objects.filter(device_serial_no=device_serial_no).first()
-        user = User.objects.filter(pk=user_id).first()
-        session = Session.objects.filter(pk=session_id).first()
-        # session data value provide as list so save as json with key "energy_levels"
-        energy_list = session_data['energy_levels']
-        # In list take overall minimum and maximum for a session by using below function.
-        low_energy_level = min(energy_list)
-        high_energy_level = max(energy_list)
-        session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
-                                                  highest_energy_level=high_energy_level, session_id=session,
-                                                  device_id=device, user_id=user)
-        end_date = session_data.created_at
-        Session.objects.filter(pk=session_id).update(session_end_date=end_date)
-        return Response({"message": "Session Data Save Successfully"}, status=status.HTTP_200_OK)
-    else:
-        return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        data = request.data
+        session_data = data.get('session_data', None)
+        device_serial_no = data.get('device_serial_no', None)
+        user_id = get_member_id(request)
+        if session_id and session_data and device_serial_no and user_id:
+            device = Device.objects.filter(device_serial_no=device_serial_no).first()
+            user = User.objects.filter(pk=user_id).first()
+            session = Session.objects.filter(pk=session_id).first()
+            # session data value provide as list so save as json with key "energy_levels"
+            energy_list = session_data['energy_levels']
+            # In list take overall minimum and maximum for a session by using below function.
+            low_energy_level = min(energy_list)
+            high_energy_level = max(energy_list)
+            session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
+                                                      highest_energy_level=high_energy_level, session_id=session,
+                                                      device_id=device, user_id=user)
+            end_date = session_data.created_at
+            Session.objects.filter(pk=session_id).update(session_end_date=end_date)
+            return Response({"message": "Session Data Save Successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # @api_view(["GET"])
@@ -559,7 +564,7 @@ def device_session_data_history(request):
         response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
         response['data'] = generate_user_cards(response['data'], True)
         return Response(response, status=status.HTTP_200_OK)
-    return Response(get_paginated_response(Device.objects.none(), current_url, 1, limit, extras, True))
+    return Response({"data": "No Data", "message": "No Subscribed device against the user"})
 
 
 @api_view(['POST'])
@@ -601,7 +606,8 @@ def payment_method_creation(request):
                 {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
                 status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status': "failure", "error": str(e), 'message': str(e)},
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -645,16 +651,15 @@ def payment_method_initialized(request):
                 stripe_Subscription_id = \
                     create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
                                         default_payment_method=stripe_payment_id)
+                print('stripe_Subscription_id', stripe_Subscription_id)
 
                 # Pay Latest Invoice of Subscription
                 stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
-
                 # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
-                payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
                 # need to register the device in our table
                 register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
                                                         device_price_id=stripe_product_price_id)
-                subscription = Subscription.objects.create(status=True, device_id=register_device, user_id=user,
+                subscription = Subscription.objects.create(status=0, device_id=register_device, user_id=user,
                                                            payment_method_id=payment_method,
                                                            stripe_payment_id=stripe_payment_id,
                                                            stripe_subscription_id=stripe_Subscription_id['id'],
@@ -663,7 +668,7 @@ def payment_method_initialized(request):
                 return Response({"message": "success"}, status=status.HTTP_200_OK)
             return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
-        return Response({"error_message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "failure", "error": str(e), "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -691,3 +696,36 @@ def change_password(request):
     user.save()
 
     return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_session_detail_history_for_graph(request):
+    device_serial_no = request.data.get('device_serial_no')
+    member_id = get_member_id(request)
+    if not device_serial_no:
+        return Response({"status": "failure", "error": "Device Serial Number is required"}, status.HTTP_400_BAD_REQUEST)
+
+    devices = Device.objects.filter(device_serial_no=device_serial_no).values_list('pk', flat=True)
+
+    subscription = Subscription.objects.filter(device_id__in=devices, user_id=member_id, status=1).order_by(
+        '-created_at').first()
+
+    active_device_id = subscription.device_id
+
+    # if session_id:
+
+    session_id = request.data.get('session_id', None)
+
+    if session_id:
+        params = {
+            "device_id": active_device_id,
+            "session_id": session_id
+        }
+    else:
+        params = {
+            "device_id": active_device_id
+        }
+
+    session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
+    return Response(session_data, status.HTTP_200_OK)

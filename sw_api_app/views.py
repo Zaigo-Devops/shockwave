@@ -12,7 +12,8 @@ from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializ
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
     create_address, create_product, create_price, create_subscription
-from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, unix_timestamp_format
+from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
+    unix_timestamp_format
 
 from django.contrib.auth import authenticate
 from requests import Response
@@ -493,6 +494,7 @@ def session_list(request):
                     data = SessionData.objects.filter(session_id=session).values_list('highest_energy_level', flat=True)
                     if data:
                         sub_values['session'] = session.pk
+                        sub_values['timestamp'] = str(from_date)
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         values_list.append(sub_values)
@@ -670,7 +672,7 @@ def payment_method_initialized(request):
                 except:
                     start_date = datetime.date.today()
                     end_date = start_date + datetime.timedelta(days=30)
-                    
+
                 register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
                                                         device_price_id=stripe_product_price_id)
                 subscription = Subscription.objects.create(status=0, device_id=register_device, user_id=user,
@@ -710,6 +712,7 @@ def change_password(request):
     user.save()
 
     return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -775,6 +778,7 @@ def export_session_data_history_as_pdf(request):
             return Response({"url": url}, status.HTTP_200_OK)
     return Response({"data": "NO data"})
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_session_detail_history_for_graph(request):
@@ -806,4 +810,3 @@ def get_session_detail_history_for_graph(request):
 
     session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
     return Response(session_data, status.HTTP_200_OK)
-

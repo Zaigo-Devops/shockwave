@@ -470,6 +470,8 @@ def session_list(request):
         try:
             user_id = get_member_id(request)
             device_serial_no = request.data.get('device_serial_no', None)
+            if not device_serial_no:
+                return Response({"status": "failure", "error": "Device Serial Number is required."})
             start_date = request.data.get('start_date', None)
             end_date = request.data.get('end_date', None)
             if start_date and not end_date:
@@ -498,8 +500,9 @@ def session_list(request):
                         sub_values['timestamp'] = str(from_date)
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
-                        values_list.append(sub_values)
-                date_values.append(values_list)
+                        date_values.append(sub_values)
+                        # values_list.append(sub_values)
+                # date_values.append(values_list)
             return Response(list(set(date_values)), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)

@@ -12,7 +12,7 @@ from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializ
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
     create_address, create_product, create_price, create_subscription
-from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name
+from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, unix_timestamp_format
 
 from django.contrib.auth import authenticate
 from requests import Response
@@ -636,8 +636,7 @@ def payment_method_initialized(request):
             device_serial_no = request.data.get('device_serial_no')
             device_name = request.data.get('device_name')
             payment_method_id = request.data.get('payment_method_id')
-            start_date = datetime.date.today()
-            end_date = start_date + datetime.timedelta(days=30)
+
             user_id = get_member_id(request)
             user = User.objects.get(pk=user_id)
             user_profile = UserProfile.objects.get(user_id=user_id)
@@ -660,9 +659,18 @@ def payment_method_initialized(request):
                 print('stripe_Subscription_id', stripe_Subscription_id)
 
                 # Pay Latest Invoice of Subscription
-                stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
+                invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
                 # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
                 # need to register the device in our table
+                try:
+                    start_date = unix_timestamp_format(
+                        invoice.lines.data[0].period.start)
+                    end_date = unix_timestamp_format(
+                        invoice.lines.data[0].period.end)
+                except:
+                    start_date = datetime.date.today()
+                    end_date = start_date + datetime.timedelta(days=30)
+                    
                 register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
                                                         device_price_id=stripe_product_price_id)
                 subscription = Subscription.objects.create(status=0, device_id=register_device, user_id=user,

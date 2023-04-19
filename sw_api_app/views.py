@@ -578,7 +578,7 @@ def device_session_data_history(request):
             max_value=Max('highest_energy_level'),
             min_value=Min('highest_energy_level'))
         response = {
-            "device_id": session.device_id,
+            "device_id": session.device_id.pk,
             "device_serial_no": session.device_id.device_serial_no,
             "session_created_at": session.created_at,
             "location": session.location,

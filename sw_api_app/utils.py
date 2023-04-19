@@ -9,6 +9,11 @@ from django.core.files.base import File
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from SHOCK_WAVE.settings import EMAIL_PORT, EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
+import datetime
+
+INACTIVE = 0
+ACTIVE = 1
+CANCEL = 2
 
 
 # getting member id from auth token
@@ -126,3 +131,12 @@ def generate_user_card(obj):
         "created_at": obj.created_at
     }
     return session_data
+
+
+
+
+
+def unix_timestamp_format(unix_timestamp):
+    dt = datetime.datetime.fromtimestamp(unix_timestamp)
+    formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+    return formatted_date

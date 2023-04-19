@@ -1,6 +1,8 @@
 from SHOCK_WAVE import urls
 from django.urls import path, include
 from rest_framework import routers
+
+from sw_api_app.stripe import stripe_webhook
 from . import views
 from .views import *
 
@@ -28,6 +30,7 @@ urlpatterns = [
     path('payment_method_create/', views.payment_method_creation),
     path('payment_method_initialized/', views.payment_method_initialized),
     path('payment_method_list/', views.my_payment_method),
+    path('stripe_webhook/', stripe_webhook), 
     path('change_password/', views.change_password),
     path('pdf_export/', views.export_session_data_history_as_pdf),
     path('session_data_detailed_history/', views.get_session_detail_history_for_graph)

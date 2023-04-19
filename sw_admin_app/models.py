@@ -111,3 +111,13 @@ class UserDevice(models.Model):
     mobile_device_id = models.CharField(max_length=256, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class SubscriptionPeriod(models.Model):
+    subscription_id = models.ForeignKey(Subscription,on_delete=models.SET_NULL, null=True)
+    stripe_subscription_id = models.CharField(max_length=256, blank=True, null=True, default=None)
+    stripe_customer_id = models.CharField(max_length=256, blank=True, null=True, default=None)
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

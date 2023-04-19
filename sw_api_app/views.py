@@ -4,7 +4,7 @@ from itertools import count
 
 import stripe
 from django.contrib.auth.models import User
-from django.db.models import Subquery, OuterRef
+from django.db.models import Subquery, OuterRef, Max, Min
 
 from SHOCK_WAVE import settings
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
@@ -562,17 +562,37 @@ def device_session_data_history(request):
         return Response("please provide End_date")
     if not start_date and end_date:
         return Response("please provide Start_date")
-    device_id_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
-    if device_id_list:
+    subscription_qs = Subscription.objects.filter(user_id=user_id, status=1)
+    device_id_list = subscription_qs.values_list('device_id', flat=True)
+    if subscription_qs.exists():
         sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
         if device_serial_no and session_id:
             sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no,
                                            session_id__id=session_id).order_by('created_at')
         if start_date and end_date:
             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
-        response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
-        response['data'] = generate_user_cards(response['data'], True)
-        return Response(response, status=status.HTTP_200_OK)
+        session = Session.objects.filter(pk=session_id, device_id__in=device_id_list).first()
+        if not session:
+            return Response({"data": "Failure", "message": "Invalid Session ID Provided"})
+        session_max_min = SessionData.objects.filter(session_id=session).aggregate(
+            max_value=Max('highest_energy_level'),
+            min_value=Min('highest_energy_level'))
+        response = {
+            "device_id": session.device_id,
+            "device_serial_no": session.device_id.device_serial_no,
+            "session_created_at": session.created_at,
+            "location": session.location,
+            "environment_type": session.environment,
+            "session_maximum_value": session_max_min.get('max_value', 0.0),
+            "session_minimum_value": session_max_min.get('min_value', 0.0),
+            "data": sub_device.values('created_at', 'highest_energy_level')
+        }
+        return Response(response, status.HTTP_200_OK)
+        # subscription = subscription_qs.first()
+
+        # response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
+        # response['data'] = generate_user_cards(response['data'], True)
+        # return Response(response, status=status.HTTP_200_OK)
     return Response({"data": "No Data", "message": "No Subscribed device against the user"})
 
 

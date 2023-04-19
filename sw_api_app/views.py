@@ -4,6 +4,7 @@ from itertools import count
 
 import stripe
 from django.contrib.auth.models import User
+from django.db.models import Subquery, OuterRef
 
 from SHOCK_WAVE import settings
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
@@ -808,5 +809,11 @@ def get_session_detail_history_for_graph(request):
             "device_id": active_device_id
         }
 
-    session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
+    get_max_highest_energy_level_query = SessionData.objects.filter(session_id=OuterRef('session_id'),
+                                                                    device_id=OuterRef('device_id')).order_by(
+        '-highest_energy_level').values('id')
+    session_data = SessionData.objects.filter(**params).filter(
+        id=Subquery(get_max_highest_energy_level_query[:1])).values(
+        'created_at', 'highest_energy_level')
+    # session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
     return Response(session_data, status.HTTP_200_OK)

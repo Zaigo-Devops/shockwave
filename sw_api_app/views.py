@@ -483,7 +483,7 @@ def session_list(request):
             for days in range(0, date_range.days + 1):
                 dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
             device_id = Device.objects.filter(device_serial_no=device_serial_no).first().id
-            date_values = {}
+            date_values = []
             for date in dates:
                 from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
                 to_date = from_date + timedelta(hours=23, minutes=59)
@@ -499,8 +499,8 @@ def session_list(request):
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         values_list.append(sub_values)
-                date_values[str(from_date)] = values_list
-            return Response(date_values, status=status.HTTP_200_OK)
+                date_values.append(values_list)
+            return Response(list(set(date_values)), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -501,9 +501,10 @@ def session_list(request):
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         date_values.append(sub_values)
+                        print('date_values', date_values)
                         # values_list.append(sub_values)
                 # date_values.append(values_list)
-            return Response(list(set(date_values)), status=status.HTTP_200_OK)
+            return Response(date_values, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -8,15 +8,14 @@
 }
 th{
 padding:5px}
+
   </style>
 </head>
 <body>
 
-<h2></h2>
-
-  <b>Location</b>: {{ location }}<br/>
-  <b>Device Name</b>: {{ device_name }}<br/>
-  <b>Environment</b>: {{ environment }}<br/>
+  <p><b>Location</b>: {{ location }}</p>
+ <p> <p><b>Device Name</b>: {{ device_name }}</p>
+  <p><b>Environment</b>: {{ environment }}</p>
 
 <table>
 
@@ -30,7 +29,7 @@ padding:5px}
 
     {% for data in datas %}
     <tr>
-    <td>{{ data.s_no }}</td>
+    <td>{{ forloop.counter }}</td>
     <td>{{ data.device_id }}</td>
     <td>{{ data.highest_energy_level}}</td>
     <td>{{ data.lowest_energy_level }}</td>
@@ -39,7 +38,6 @@ padding:5px}
     {% endfor %}
 
 </table>
-
 </body>
 </html>
 

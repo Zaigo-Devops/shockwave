@@ -737,9 +737,7 @@ def export_session_data_history_as_pdf(request):
             # return render(request, 'email/export.html', context)
             session_list = []
             for data in response['data']:
-                count = 0
                 session_data = {}
-                session_data.update({"s_no": count + 1})
                 session_data.update({"device_id": data["device_serial_no"]})
                 session_data.update({"device_name": data["device_name"]})
                 session_data.update({"environment": data["environment"]})

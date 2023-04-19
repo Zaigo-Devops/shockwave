@@ -24,11 +24,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserDetailSerializer(serializers.ModelSerializer):
     insurance_provider = serializers.CharField(source="user_profile.insurance_provider", read_only=True)
+    user_address = serializers.CharField(source="user_profile.user_address", read_only=True)
     user_profile_image = serializers.ImageField(source="user_profile.user_profile_image", read_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'insurance_provider', 'user_profile_image',)
+        fields = ('id', 'email', 'first_name', 'last_name', 'insurance_provider', 'user_profile_image', 'user_address')
 
 
 # Serializer to Register User

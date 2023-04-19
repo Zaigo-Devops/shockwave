@@ -595,21 +595,25 @@ def payment_method_creation(request):
             user_id = get_member_id(request)
             user = User.objects.get(pk=user_id)
             user_profile = UserProfile.objects.get(user_id=user_id)
-            stripe_customer_id = user_profile.stripe_customer_id
-            created_payment_method_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year,
-                                                              card_cvc,
-                                                              name, email, address)
-
-            payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id['id'],
-                                                             user_id_id=user_id)
-            attach_payment_method(stripe_customer_id, created_payment_method_id['id'])
-            customer_update = stripe.Customer.modify(stripe_customer_id,
-                                                     invoice_settings={
-                                                         'default_payment_method': created_payment_method_id['id']})
-            BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2, city=city,
+            # stripe_customer_id = user_profile.stripe_customer_id
+            # created_payment_method_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year,
+            #                                                   card_cvc,
+            #                                                   name, email, address)
+            #
+            # payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id['id'],
+            #                                                  user_id_id=user_id)
+            # attach_payment_method(stripe_customer_id, created_payment_method_id['id'])
+            # customer_update = stripe.Customer.modify(stripe_customer_id,
+            #                                          invoice_settings={
+            #                                              'default_payment_method': created_payment_method_id['id']})
+            billing_address = BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2, city=city,
                                           state=state, country=country, pin_code=postal_code)
+            if billing_address:
+                address_format = f"{line1} {line2} {city} {state} {postal_code}"
+                address_format = address_format.strip()
+                user_address = UserProfile.objects.filter(user_id=user_id).update(user_address=address_format)
             return Response(
-                {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
+                # {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
                 status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'status': "failure", "error": str(e), 'message': str(e)},

@@ -504,10 +504,11 @@ def session_list(request):
                 values_list = []
                 for session in sessions:
                     sub_values = {}
-                    data = SessionData.objects.filter(session_id=session).values_list('highest_energy_level', flat=True)
+                    qs = SessionData.objects.filter(session_id=session)
+                    data = qs.values_list('highest_energy_level', flat=True)
                     if data:
                         sub_values['session'] = session.pk
-                        sub_values['timestamp'] = str(from_date)
+                        sub_values['timestamp'] = str(qs.order_by('-highest_energy_level').first().created_at)
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         date_values.append(sub_values)

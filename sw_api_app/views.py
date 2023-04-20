@@ -105,7 +105,7 @@ class LoginView(APIView):
             user_name = user.first_name
             if len(user.last_name) > 0:
                 user_name = user.first_name + ' ' + user.last_name
-            payment_method = user.subscription_set.filter(status=1).count()
+            payment_method = user.paymentmethod_set.count()
             payment_method_added = False
             if payment_method > 0:
                 payment_method_added = True
@@ -640,7 +640,7 @@ def payment_method_creation(request):
                 address_format = address_format.strip()
                 user_address = UserProfile.objects.filter(user_id=user_id).update(user_address=address_format)
             return Response(
-                # {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
+                {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
                 status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'status': "failure", "error": str(e), 'message': str(e)},

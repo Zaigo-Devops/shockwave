@@ -685,7 +685,10 @@ def payment_method_initialized(request):
                 print('stripe_Subscription_id', stripe_Subscription_id)
 
                 # Pay Latest Invoice of Subscription
-                invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
+                try:
+                    invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
+                except Exception as e:
+                    return Response({"error": str(e)}, status.HTTP_400_BAD_REQUEST)
                 # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
                 # need to register the device in our table
                 try:

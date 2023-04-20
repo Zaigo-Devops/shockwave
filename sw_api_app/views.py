@@ -699,7 +699,7 @@ def payment_method_initialized(request):
 
                 register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
                                                         device_price_id=stripe_product_price_id)
-                subscription = Subscription.objects.create(status=0, device_id=register_device, user_id=user,
+                subscription = Subscription.objects.create(status=1, device_id=register_device, user_id=user,
                                                            payment_method_id=payment_method,
                                                            stripe_payment_id=stripe_payment_id,
                                                            stripe_subscription_id=stripe_Subscription_id['id'],

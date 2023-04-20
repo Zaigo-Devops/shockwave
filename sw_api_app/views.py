@@ -396,7 +396,7 @@ def session_data_save(request, session_id):
         device_serial_no = data.get('device_serial_no', None)
         user_id = get_member_id(request)
         if session_id and session_data and device_serial_no and user_id:
-            device = Device.objects.filter(device_serial_no=device_serial_no).first()
+            device = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').first()
             if device:
                 user = User.objects.filter(pk=user_id).first()
                 session = Session.objects.filter(pk=session_id).first()

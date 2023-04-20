@@ -11,6 +11,20 @@ class DeviceAdmin(admin.ModelAdmin):
     model = Device
     fields = ('device_name', 'device_serial_no',)
     list_display = ('device_name', 'device_serial_no',)
+    actions_on_top = False
+    actions_on_bottom = False
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
     # def save_model(self, request, obj, form, change):
     #     super().save_model(request, obj, form, change)
@@ -54,7 +68,9 @@ class SubscriptionAdmin(admin.ModelAdmin):
         if obj:
             obj.status = 0
             obj.save()
-            delete_subscription(obj.id)
+            subscription_id = Subscription.objects.filter(id=obj.id).first().stripe_subscription_id
+            if subscription_id:
+                delete_subscription(subscription_id)
 
 
 admin.site.register(Device, DeviceAdmin)

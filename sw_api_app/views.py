@@ -62,7 +62,7 @@ class RegisterUserAPIView(generics.CreateAPIView):
         access_token = str(at)
         token.set_exp(from_time=None, lifetime=timedelta(days=367))
 
-        payment_method = user.subscription_set.filter(status=1).count()
+        payment_method = user.paymentmethod_set.count()
         payment_method_added = False
         if payment_method > 0:
             payment_method_added = True

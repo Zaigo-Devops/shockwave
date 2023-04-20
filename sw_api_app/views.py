@@ -578,7 +578,10 @@ def device_session_data_history(request):
         return Response("please provide Start_date")
     subscription_qs = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
                                                   status=1)
-    device_id_list = subscription_qs.values_list('device_id', flat=True)
+    subscription = subscription_qs.order_by('-created_at').first()
+    device_id_list = []
+    if subscription:
+        device_id_list = [subscription.device_id]
     if subscription_qs.exists():
         sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
         if session_id:

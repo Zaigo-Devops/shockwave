@@ -871,7 +871,8 @@ def get_session_detail_history_for_graph(request):
             'created_at', 'highest_energy_level')
     else:
         session_data = list(
-            SessionData.objects.filter(device_id=active_device_id).order_by('-highest_energy_level')[:10])
+            SessionData.objects.filter(device_id=active_device_id).order_by('-highest_energy_level').values(
+                'created_at', 'highest_energy_level')[:10])
         session_data.reverse()
     # session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
     return Response(session_data, status.HTTP_200_OK)

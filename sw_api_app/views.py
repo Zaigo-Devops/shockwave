@@ -371,7 +371,8 @@ def cancel_registration(request):
     try:
         user_id = get_member_id(request)
         device_serial_no = request.data['device_serial_no']
-        subscription = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no).first()
+        subscription = Subscription.objects.filter(user_id=user_id,
+                                                   device_id__device_serial_no=device_serial_no).first()
         if subscription:
             delete_subscription(subscription.stripe_subscription_id)
             # Subscription.objects.filter(id=subscription.id, user_id=user_id).update(status=0)
@@ -396,7 +397,10 @@ def session_data_save(request, session_id):
         device_serial_no = data.get('device_serial_no', None)
         user_id = get_member_id(request)
         if session_id and session_data and device_serial_no and user_id:
-            device = Device.objects.filter(device_serial_no=device_serial_no).first()
+            # device = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').first()
+            subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
+                                                       status=1).order_by('-created_at').first()
+            device = subscription.device_id
             if device:
                 user = User.objects.filter(pk=user_id).first()
                 session = Session.objects.filter(pk=session_id).first()

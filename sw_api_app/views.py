@@ -156,7 +156,7 @@ def is_device_registration(request):
                 if subscription.status == 1:
                     return Response({"is subscribed": True}, status=status.HTTP_200_OK)
             else:
-                return Response({"is subscribed": False}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"is subscribed": False}, status=status.HTTP_200_OK)
         except Exception as e:
             print('Error Detail', str(e))
 

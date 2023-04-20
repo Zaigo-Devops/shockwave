@@ -149,9 +149,9 @@ class LoginView(APIView):
 def is_device_registration(request):
     if request.method == 'POST':
         try:
-            device_id = request.data.get('device_serial_no', None)
-            user_id = get_member_id(request)
-            subscription = Subscription.objects.filter(user_id=user_id, device_id_device_serial_no=device_id)
+            device_serial_no = request.data.get('device_serial_no', None)
+            user_id = 1
+            subscription = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no).first()
             if subscription:
                 if subscription.status == 1:
                     return Response({"is subscribed": True}, status=status.HTTP_200_OK)

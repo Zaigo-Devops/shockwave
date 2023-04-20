@@ -62,7 +62,7 @@ class RegisterUserAPIView(generics.CreateAPIView):
         access_token = str(at)
         token.set_exp(from_time=None, lifetime=timedelta(days=367))
 
-        payment_method = user.subscription_set.filter(status=1).count()
+        payment_method = user.paymentmethod_set.count()
         payment_method_added = False
         if payment_method > 0:
             payment_method_added = True
@@ -105,7 +105,7 @@ class LoginView(APIView):
             user_name = user.first_name
             if len(user.last_name) > 0:
                 user_name = user.first_name + ' ' + user.last_name
-            payment_method = user.subscription_set.filter(status=1).count()
+            payment_method = user.paymentmethod_set.count()
             payment_method_added = False
             if payment_method > 0:
                 payment_method_added = True
@@ -633,8 +633,12 @@ def payment_method_creation(request):
             customer_update = stripe.Customer.modify(stripe_customer_id,
                                                      invoice_settings={
                                                          'default_payment_method': created_payment_method_id['id']})
-            BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2, city=city,
+            billing_address = BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2, city=city,
                                           state=state, country=country, pin_code=postal_code)
+            if billing_address:
+                address_format = f"{line1} {line2} {city} {state} {postal_code}"
+                address_format = address_format.strip()
+                user_address = UserProfile.objects.filter(user_id=user_id).update(user_address=address_format)
             return Response(
                 {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
                 status=status.HTTP_200_OK)

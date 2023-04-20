@@ -834,10 +834,15 @@ def get_session_detail_history_for_graph(request):
     if not device_serial_no:
         return Response({"status": "failure", "error": "Device Serial Number is required"}, status.HTTP_400_BAD_REQUEST)
 
-    devices = Device.objects.filter(device_serial_no=device_serial_no).values_list('pk', flat=True)
+    devices = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').values_list('pk',
+                                                                                                           flat=True)
 
     subscription = Subscription.objects.filter(device_id__in=devices, user_id=member_id, status=1).order_by(
         '-created_at').first()
+
+    if not subscription:
+        return Response({"status": "failure", "error": "Subscription is invalid or not exists"},
+                        status.HTTP_400_BAD_REQUEST)
 
     active_device_id = subscription.device_id
 

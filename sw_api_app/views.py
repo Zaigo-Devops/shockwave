@@ -154,9 +154,9 @@ def is_device_registration(request):
             subscription = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no).first()
             if subscription:
                 if subscription.status == 1:
-                    return Response({"is subscribed": True}, status=status.HTTP_200_OK)
+                    return Response({"is_subscribed": True}, status=status.HTTP_200_OK)
             else:
-                return Response({"is subscribed": False}, status=status.HTTP_200_OK)
+                return Response({"is_subscribed": False}, status=status.HTTP_200_OK)
         except Exception as e:
             print('Error Detail', str(e))
 

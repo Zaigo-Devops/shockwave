@@ -591,7 +591,7 @@ def device_session_data_history(request):
             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
         session = Session.objects.filter(pk=session_id, device_id__in=device_id_list).first()
         if not session:
-            return Response({"data": "Failure", "message": "Invalid Session ID Provided"})
+            return Response({"data": "Failure", "message": "Invalid Session ID Provided"}, status.HTTP_400_BAD_REQUEST)
         session_max_min = SessionData.objects.filter(session_id=session).aggregate(
             max_value=Max('highest_energy_level'),
             min_value=Min('highest_energy_level'))

@@ -62,7 +62,7 @@ class RegisterUserAPIView(generics.CreateAPIView):
         access_token = str(at)
         token.set_exp(from_time=None, lifetime=timedelta(days=367))
 
-        payment_method = user.subscription_set.filter(status=1).count()
+        payment_method = user.paymentmethod_set.count()
         payment_method_added = False
         if payment_method > 0:
             payment_method_added = True
@@ -105,7 +105,7 @@ class LoginView(APIView):
             user_name = user.first_name
             if len(user.last_name) > 0:
                 user_name = user.first_name + ' ' + user.last_name
-            payment_method = user.subscription_set.filter(status=1).count()
+            payment_method = user.paymentmethod_set.count()
             payment_method_added = False
             if payment_method > 0:
                 payment_method_added = True
@@ -149,14 +149,15 @@ class LoginView(APIView):
 def is_device_registration(request):
     if request.method == 'POST':
         try:
-            device_id = request.data.get('device_id', None)
-            user_id = get_member_id(request)
-            subscription = Subscription.objects.get(user_id=user_id, device_id=device_id)
+            device_serial_no = request.data.get('device_serial_no', None)
+            user_id = 1
+            subscription = Subscription.objects.filter(user_id=user_id,
+                                                       device_id__device_serial_no=device_serial_no).first()
             if subscription:
                 if subscription.status == 1:
-                    return Response({"is subscribed": True}, status=status.HTTP_200_OK)
-                else:
-                    return Response({"is subscribed": False}, status=status.HTTP_404_NOT_FOUND)
+                    return Response({"is_subscribed": True}, status=status.HTTP_200_OK)
+            else:
+                return Response({"is_subscribed": False}, status=status.HTTP_200_OK)
         except Exception as e:
             print('Error Detail', str(e))
 
@@ -367,15 +368,20 @@ def session_setup(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def cancel_registration(request):
-    user_id = get_member_id(request)
-    subscription_id = request.data.get('subscription_id', None)
-    subscription = Subscription.objects.filter(id=subscription_id, user_id=user_id).exists()
-    if subscription:
-        delete_subscription(subscription_id)
-        Subscription.objects.filter(id=subscription_id).update(status=0)
-        return Response('Subscription Cancelled !!!', status=status.HTTP_200_OK)
-    else:
-        return Response('Invalid Subscription ID Provided', status=status.HTTP_400_BAD_REQUEST)
+    try:
+        user_id = get_member_id(request)
+        device_serial_no = request.data['device_serial_no']
+        subscription = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no).first()
+        if subscription:
+            delete_subscription(subscription.stripe_subscription_id)
+            # Subscription.objects.filter(id=subscription.id, user_id=user_id).update(status=0)
+            setattr(subscription, 'status', 0)
+            return Response('Subscription Cancelled !!!', status=status.HTTP_200_OK)
+        else:
+            return Response('Invalid Subscription ID Provided', status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error_message": str(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])
@@ -501,9 +507,10 @@ def session_list(request):
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         date_values.append(sub_values)
+                        print('date_values', date_values)
                         # values_list.append(sub_values)
                 # date_values.append(values_list)
-            return Response(list(set(date_values)), status=status.HTTP_200_OK)
+            return Response(date_values, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -632,8 +639,13 @@ def payment_method_creation(request):
             customer_update = stripe.Customer.modify(stripe_customer_id,
                                                      invoice_settings={
                                                          'default_payment_method': created_payment_method_id['id']})
-            BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2, city=city,
-                                          state=state, country=country, pin_code=postal_code)
+            billing_address = BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2,
+                                                            city=city,
+                                                            state=state, country=country, pin_code=postal_code)
+            if billing_address:
+                address_format = f"{line1} {line2} {city} {state} {postal_code}"
+                address_format = address_format.strip()
+                user_address = UserProfile.objects.filter(user_id=user_id).update(user_address=address_format)
             return Response(
                 {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
                 status=status.HTTP_200_OK)

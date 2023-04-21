@@ -366,23 +366,24 @@ def session_setup(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def cancel_registration(request):
-    try:
-        user_id = get_member_id(request)
-        device_serial_no = request.data['device_serial_no']
-        subscription = Subscription.objects.filter(user_id=user_id,
-                                                   device_id__device_serial_no=device_serial_no).first()
-        if subscription:
-            delete_subscription(subscription.stripe_subscription_id)
-            # Subscription.objects.filter(id=subscription.id, user_id=user_id).update(status=0)
-            setattr(subscription, 'status', 0)
-            return Response('Subscription Cancelled !!!', status=status.HTTP_200_OK)
-        else:
-            return Response('Invalid Subscription ID Provided', status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
-        return Response({"error_message": str(e)},
-                        status=status.HTTP_400_BAD_REQUEST)
+    if request.method == 'POST':
+        try:
+            user_id = get_member_id(request)
+            device_serial_no = request.data['device_serial_no']
+            subscription = Subscription.objects.filter(user_id=user_id,
+                                                       device_id__device_serial_no=device_serial_no).first()
+            if subscription:
+                delete_subscription(subscription.stripe_subscription_id)
+                # Subscription.objects.filter(id=subscription.id, user_id=user_id).update(status=0)
+                setattr(subscription, 'status', 0)
+                return Response({'message': 'Subscription Cancelled !!!'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Invalid ID Provided'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error_message": str(e)},
+                            status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])
@@ -658,7 +659,7 @@ def payment_method_creation(request):
                 user_address = UserProfile.objects.filter(user_id=user_id).update(user_address=address_format)
             return Response(
                 {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id,
-                    "card_last4_number": card_last4_number},
+                 "card_last4_number": card_last4_number},
                 status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'status': "failure", "error": str(e), 'message': str(e)},

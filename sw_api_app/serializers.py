@@ -3,6 +3,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 
+from SHOCK_WAVE import settings
 from sw_admin_app.models import UserProfile, BillingAddress, Device, Subscription
 from .stripe import create_payment_customer
 from sw_api_app.utils import get_attachment_from_name
@@ -30,7 +31,16 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'insurance_provider', 'user_profile_image', 'user_address', 'user_phone_number')
+        fields = ('id', 'email', 'first_name', 'last_name', 'insurance_provider', 'user_profile_image', 'user_address',
+                  'user_phone_number')
+
+    def to_representation(self, instance):
+        user_image = UserProfile.objects.filter(user_id=instance.id).get()
+        response = super(UserDetailSerializer, self).to_representation(instance)
+        if user_image:
+            user_profile = f"{settings.MY_DOMAIN}/media/{user_image.user_profile_image}".replace("//media", "/media")
+            response['user_profile_image'] = user_profile
+        return response
 
 
 # Serializer to Register User

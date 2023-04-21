@@ -149,14 +149,15 @@ class LoginView(APIView):
 def is_device_registration(request):
     if request.method == 'POST':
         try:
-            device_id = request.data.get('device_serial_no', None)
+            device_serial_no = request.data.get('device_serial_no', None)
             user_id = get_member_id(request)
-            subscription = Subscription.objects.filter(user_id=user_id, device_id_device_serial_no=device_id)
+            subscription = Subscription.objects.filter(user_id=user_id,
+                                                       device_id__device_serial_no=device_serial_no).first()
             if subscription:
                 if subscription.status == 1:
-                    return Response({"is subscribed": True}, status=status.HTTP_200_OK)
+                    return Response({"is_subscribed": True}, status=status.HTTP_200_OK)
             else:
-                return Response({"is subscribed": False}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"is_subscribed": False}, status=status.HTTP_200_OK)
         except Exception as e:
             print('Error Detail', str(e))
 
@@ -367,15 +368,21 @@ def session_setup(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def cancel_registration(request):
-    user_id = get_member_id(request)
-    subscription_id = request.data.get('subscription_id', None)
-    subscription = Subscription.objects.filter(id=subscription_id, user_id=user_id).exists()
-    if subscription:
-        delete_subscription(subscription_id)
-        Subscription.objects.filter(id=subscription_id).update(status=0)
-        return Response('Subscription Cancelled !!!', status=status.HTTP_200_OK)
-    else:
-        return Response('Invalid Subscription ID Provided', status=status.HTTP_400_BAD_REQUEST)
+    try:
+        user_id = get_member_id(request)
+        device_serial_no = request.data['device_serial_no']
+        subscription = Subscription.objects.filter(user_id=user_id,
+                                                   device_id__device_serial_no=device_serial_no).first()
+        if subscription:
+            delete_subscription(subscription.stripe_subscription_id)
+            # Subscription.objects.filter(id=subscription.id, user_id=user_id).update(status=0)
+            setattr(subscription, 'status', 0)
+            return Response('Subscription Cancelled !!!', status=status.HTTP_200_OK)
+        else:
+            return Response('Invalid Subscription ID Provided', status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error_message": str(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])
@@ -390,7 +397,10 @@ def session_data_save(request, session_id):
         device_serial_no = data.get('device_serial_no', None)
         user_id = get_member_id(request)
         if session_id and session_data and device_serial_no and user_id:
-            device = Device.objects.filter(device_serial_no=device_serial_no).first()
+            # device = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').first()
+            subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
+                                                       status=1).order_by('-created_at').first()
+            device = subscription.device_id
             if device:
                 user = User.objects.filter(pk=user_id).first()
                 session = Session.objects.filter(pk=session_id).first()
@@ -494,10 +504,11 @@ def session_list(request):
                 values_list = []
                 for session in sessions:
                     sub_values = {}
-                    data = SessionData.objects.filter(session_id=session).values_list('highest_energy_level', flat=True)
+                    qs = SessionData.objects.filter(session_id=session)
+                    data = qs.values_list('highest_energy_level', flat=True)
                     if data:
                         sub_values['session'] = session.pk
-                        sub_values['timestamp'] = str(from_date)
+                        sub_values['timestamp'] = str(qs.order_by('-highest_energy_level').first().created_at)
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         date_values.append(sub_values)
@@ -568,16 +579,19 @@ def device_session_data_history(request):
         return Response("please provide Start_date")
     subscription_qs = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
                                                   status=1)
-    device_id_list = subscription_qs.values_list('device_id', flat=True)
+    subscription = subscription_qs.order_by('-created_at').first()
+    device_id_list = []
+    if subscription:
+        device_id_list = [subscription.device_id]
     if subscription_qs.exists():
-        sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
-        if session_id:
-            sub_device = sub_device.filter(session_id__id=session_id).order_by('created_at')
+        sub_device = SessionData.objects.filter(session_id__id=session_id).order_by('created_at')
+        # if session_id:
+        #     sub_device = sub_device.filter(session_id__id=session_id).order_by('created_at')
         if start_date and end_date:
             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
-        session = Session.objects.filter(pk=session_id, device_id__in=device_id_list).first()
+        session = Session.objects.filter(pk=session_id).first()
         if not session:
-            return Response({"data": "Failure", "message": "Invalid Session ID Provided"})
+            return Response({"data": "Failure", "message": "Invalid Session ID Provided"}, status.HTTP_400_BAD_REQUEST)
         session_max_min = SessionData.objects.filter(session_id=session).aggregate(
             max_value=Max('highest_energy_level'),
             min_value=Min('highest_energy_level'))
@@ -823,10 +837,16 @@ def get_session_detail_history_for_graph(request):
     if not device_serial_no:
         return Response({"status": "failure", "error": "Device Serial Number is required"}, status.HTTP_400_BAD_REQUEST)
 
-    devices = Device.objects.filter(device_serial_no=device_serial_no).values_list('pk', flat=True)
+    # devices = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').values_list('pk',
+    #                                                                                                        flat=True)
 
-    subscription = Subscription.objects.filter(device_id__in=devices, user_id=member_id, status=1).order_by(
+    subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=member_id,
+                                               status=1).order_by(
         '-created_at').first()
+
+    if not subscription:
+        return Response({"status": "failure", "error": "Subscription is invalid or not exists"},
+                        status.HTTP_400_BAD_REQUEST)
 
     active_device_id = subscription.device_id
 
@@ -844,12 +864,19 @@ def get_session_detail_history_for_graph(request):
             "device_id": active_device_id
         }
 
-    get_max_highest_energy_level_query = SessionData.objects.filter(session_id=OuterRef('session_id'),
-                                                                    device_id=OuterRef('device_id')).order_by(
-        '-highest_energy_level').values('id')
-    session_data = SessionData.objects.filter(**params).filter(
-        id=Subquery(get_max_highest_energy_level_query[:1])).values(
-        'created_at', 'highest_energy_level')
+    if active_device_id.session_set.count() > 1:
+
+        get_max_highest_energy_level_query = SessionData.objects.filter(session_id=OuterRef('session_id'),
+                                                                        device_id=OuterRef('device_id')).order_by(
+            '-highest_energy_level').values('id')
+        session_data = SessionData.objects.filter(**params).filter(
+            id=Subquery(get_max_highest_energy_level_query[:1])).values(
+            'created_at', 'highest_energy_level')
+    else:
+        session_data = list(
+            SessionData.objects.filter(device_id=active_device_id).order_by('-highest_energy_level').values(
+                'created_at', 'highest_energy_level')[:10])
+        session_data.reverse()
     # session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
     return Response(session_data, status.HTTP_200_OK)
 

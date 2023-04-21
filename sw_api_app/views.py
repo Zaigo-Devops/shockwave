@@ -640,8 +640,10 @@ def payment_method_creation(request):
             created_payment_method_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year,
                                                               card_cvc,
                                                               name, email, address)
+            card_last4_number = created_payment_method_id['card']['last4']
 
             payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id['id'],
+                                                             card_last4_no=card_last4_number,
                                                              user_id_id=user_id)
             attach_payment_method(stripe_customer_id, created_payment_method_id['id'])
             customer_update = stripe.Customer.modify(stripe_customer_id,
@@ -655,7 +657,8 @@ def payment_method_creation(request):
                 address_format = address_format.strip()
                 user_address = UserProfile.objects.filter(user_id=user_id).update(user_address=address_format)
             return Response(
-                {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id},
+                {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id,
+                    "card_last4_number": card_last4_number},
                 status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'status': "failure", "error": str(e), 'message': str(e)},
@@ -737,16 +740,16 @@ def payment_method_initialized(request):
         return Response({"status": "failure", "error": str(e), "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def delete_payment_method(request):
-    if request.method == 'POST':
-        try:
-            user_id = get_member_id(request)
-            PaymentMethod.objects.filter(user_id=user_id).delete()
-            return Response('Payment method deleted successfully', status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def delete_payment_method(request):
+#     if request.method == 'POST':
+#         try:
+#             user_id = get_member_id(request)
+#             PaymentMethod.objects.filter(user_id=user_id).delete()
+#             return Response('Payment method deleted successfully', status=status.HTTP_200_OK)
+#         except Exception as e:
+#             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['PUT'])

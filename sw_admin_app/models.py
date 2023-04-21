@@ -61,7 +61,8 @@ class SessionData(models.Model):
 
 
 class PaymentMethod(models.Model):
-    payment_id = models.CharField(max_length=256)
+    payment_id = models.CharField(max_length=256)  ## stripe payment method id is save in this column
+    card_last4_no = models.IntegerField(default=0)
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

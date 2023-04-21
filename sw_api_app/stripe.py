@@ -2,7 +2,7 @@ import datetime
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import stripe
-from SHOCK_WAVE.settings import STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SIGNING_SECRET
+from SHOCK_WAVE.settings import STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SIGNING_SECRET
 from django.views.decorators.csrf import csrf_exempt
 
 from sw_admin_app.models import Subscription, SubscriptionPeriod
@@ -10,7 +10,7 @@ from sw_api_app.utils import ACTIVE, unix_timestamp_format
 
 stripe.api_key = STRIPE_SECRET_KEY
 
- 
+
 @api_view(['POST'])
 @csrf_exempt
 def stripe_webhook(request):
@@ -18,7 +18,7 @@ def stripe_webhook(request):
     sig_header = request.META['HTTP_STRIPE_SIGNATURE']
     endpoint_secret = STRIPE_WEBHOOK_SIGNING_SECRET
     event = None
-    
+
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, endpoint_secret
@@ -27,35 +27,36 @@ def stripe_webhook(request):
         # Invalid payload
         print("except value msg", str(e))
         return Response({'msg': str(e)}, status=400)
-        
+
     if event.type == 'payment_intent.succeeded':
-        payment_intent = event.data.object # contains a stripe.PaymentIntent
+        payment_intent = event.data.object  # contains a stripe.PaymentIntent
         print('PaymentIntent was successful!')
-                
+
     elif event.type == 'invoice.paid':
-        payment_intent = event.data.object 
+        payment_intent = event.data.object
         stripe_Subscription_id = payment_intent.subscription
         stripe_customer_id = payment_intent.customer
         try:
             start_date = unix_timestamp_format(payment_intent.lines.data[0].period.start)
             end_date = unix_timestamp_format(payment_intent.lines.data[0].period.end)
-        except: 
+        except:
             start_date = datetime.date.today()
             end_date = start_date + datetime.timedelta(days=30)
-            
-        subscription = Subscription.objects.filter(stripe_subscription_id=stripe_Subscription_id,stripe_customer_id=stripe_customer_id).first()
+
+        subscription = Subscription.objects.filter(stripe_subscription_id=stripe_Subscription_id,
+                                                   stripe_customer_id=stripe_customer_id).first()
         if subscription:
             subscription.status = ACTIVE
             subscription.start_date = start_date
             subscription.end_date = end_date
             subscription.save()
-            SubscriptionPeriod.objects.create(subscription_id=subscription,stripe_subscription_id=stripe_Subscription_id,
-                                                                        stripe_customer_id=stripe_customer_id, start_date=start_date,
-                                                                        end_date=end_date)
+            SubscriptionPeriod.objects.create(subscription_id=subscription,
+                                              stripe_subscription_id=stripe_Subscription_id,
+                                              stripe_customer_id=stripe_customer_id, start_date=start_date,
+                                              end_date=end_date)
     else:
         print('Unhandled event type {}'.format(event.type))
     return Response(status=200)
-
 
 
 def create_payment_customer(name, email, payment_method=None, phone=None):
@@ -143,4 +144,9 @@ def create_subscription(customer_id, default_payment_method, price_id):
 
 def delete_subscription(subscription_id):
     delete = stripe.Subscription.delete(subscription_id)
+    return delete
+
+
+def delete_stripe_payment_method(stripe_payment_id):
+    delete = stripe.PaymentMethod.detach(stripe_payment_id)
     return delete

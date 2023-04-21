@@ -12,7 +12,7 @@ from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, S
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
-    create_address, create_product, create_price, create_subscription
+    create_address, create_product, create_price, create_subscription, delete_stripe_payment_method
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
     unix_timestamp_format
 
@@ -633,8 +633,9 @@ def payment_method_creation(request):
             customer_update = stripe.Customer.modify(stripe_customer_id,
                                                      invoice_settings={
                                                          'default_payment_method': created_payment_method_id['id']})
-            billing_address = BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2, city=city,
-                                          state=state, country=country, pin_code=postal_code)
+            billing_address = BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2,
+                                                            city=city,
+                                                            state=state, country=country, pin_code=postal_code)
             if billing_address:
                 address_format = f"{line1} {line2} {city} {state} {postal_code}"
                 address_format = address_format.strip()
@@ -672,46 +673,52 @@ def payment_method_initialized(request):
             user = User.objects.get(pk=user_id)
             user_profile = UserProfile.objects.get(user_id=user_id)
             stripe_customer_id = user_profile.stripe_customer_id
-            if payment_method_id:
-                payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
-                    '-created_at').first()
+            is_device_exists = Subscription.objects.filter(user_id=user_id,
+                                                           device_id__device_serial_no=device_serial_no,
+                                                           status=0).exists()
+            if not is_device_exists:
+                if payment_method_id:
+                    payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
+                        '-created_at').first()
+                else:
+                    payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
+                stripe_payment_id = payment_method.payment_id
+                if device_serial_no and device_name and stripe_customer_id:
+                    stripe_product_id = create_product(product_name=device_serial_no,
+                                                       description=f'The {device_name},{device_serial_no} device is '
+                                                                   f'registered.')['id']
+                    stripe_product_price_id = \
+                        create_price(amount=2500, currency='usd', interval='month', product_id=stripe_product_id)['id']
+                    stripe_Subscription_id = \
+                        create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
+                                            default_payment_method=stripe_payment_id)
+
+                    # Pay Latest Invoice of Subscription
+                    invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
+                    # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
+                    # need to register the device in our table
+                    try:
+                        start_date = unix_timestamp_format(
+                            invoice.lines.data[0].period.start)
+                        end_date = unix_timestamp_format(
+                            invoice.lines.data[0].period.end)
+                    except:
+                        start_date = datetime.date.today()
+                        end_date = start_date + datetime.timedelta(days=30)
+
+                    register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
+                                                            device_price_id=stripe_product_price_id)
+                    subscription = Subscription.objects.create(status=0, device_id=register_device, user_id=user,
+                                                               payment_method_id=payment_method,
+                                                               stripe_payment_id=stripe_payment_id,
+                                                               stripe_subscription_id=stripe_Subscription_id['id'],
+                                                               stripe_customer_id=stripe_customer_id,
+                                                               start_date=start_date,
+                                                               end_date=end_date)
+                    return Response({"message": "payment done successfully"}, status=status.HTTP_200_OK)
+                return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
             else:
-                payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
-            stripe_payment_id = payment_method.payment_id
-            if device_serial_no and device_name and stripe_customer_id:
-                stripe_product_id = create_product(product_name=device_serial_no,
-                                                   description=f'The {device_name},{device_serial_no} device is '
-                                                               f'registered.')['id']
-                stripe_product_price_id = \
-                    create_price(amount=2500, currency='usd', interval='month', product_id=stripe_product_id)['id']
-                stripe_Subscription_id = \
-                    create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
-                                        default_payment_method=stripe_payment_id)
-                print('stripe_Subscription_id', stripe_Subscription_id)
-
-                # Pay Latest Invoice of Subscription
-                invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
-                # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
-                # need to register the device in our table
-                try:
-                    start_date = unix_timestamp_format(
-                        invoice.lines.data[0].period.start)
-                    end_date = unix_timestamp_format(
-                        invoice.lines.data[0].period.end)
-                except:
-                    start_date = datetime.date.today()
-                    end_date = start_date + datetime.timedelta(days=30)
-
-                register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
-                                                        device_price_id=stripe_product_price_id)
-                subscription = Subscription.objects.create(status=0, device_id=register_device, user_id=user,
-                                                           payment_method_id=payment_method,
-                                                           stripe_payment_id=stripe_payment_id,
-                                                           stripe_subscription_id=stripe_Subscription_id['id'],
-                                                           stripe_customer_id=stripe_customer_id, start_date=start_date,
-                                                           end_date=end_date)
-                return Response({"message": "success"}, status=status.HTTP_200_OK)
-            return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
+                return Response({"message": "This device is already Subscribed"}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"status": "failure", "error": str(e), "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -845,3 +852,25 @@ def get_session_detail_history_for_graph(request):
         'created_at', 'highest_energy_level')
     # session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
     return Response(session_data, status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_payment_method(request):
+    if request.method == "POST":
+        try:
+            device_serial_no = request.data.get('device_serial_no')
+            payment_method_id = request.data.get('payment_method_id')
+            user_id = get_member_id(request)
+            subscribed = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
+                                                     payment_method_id__pk=payment_method_id).exists()
+            if not subscribed:
+                payment_method = PaymentMethod.objects.filter(pk=payment_method_id).first()
+                stripe_payment_id = payment_method.payment_id
+                delete_stripe_payment_method(stripe_payment_id)
+                payment_method.delete()
+                return Response({"message": "Payment details removed successfully"})
+            else:
+                return Response({"message": "Oops!! This payment details is already subscribed"})
+        except Exception as e:
+            return Response({'Error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

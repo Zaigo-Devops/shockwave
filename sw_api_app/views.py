@@ -755,16 +755,17 @@ def payment_method_initialized(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def change_password(request):
-    user = request.user
-    old_password = request.data.get('old_password')
-    new_password = request.data.get('new_password')
+    if request.method == "PUT":
+        user = request.user
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
 
-    if not user.check_password(old_password):
-        return Response({'error': 'Incorrect old password'}, status=status.HTTP_400_BAD_REQUEST)
-    user.set_password(new_password)
-    user.save()
+        if not user.check_password(old_password):
+            return Response({'error': 'Incorrect old password'}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(new_password)
+        user.save()
 
-    return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -889,10 +890,9 @@ def get_session_detail_history_for_graph(request):
 def cancel_payment_method(request):
     if request.method == "POST":
         try:
-            device_serial_no = request.data.get('device_serial_no')
             payment_method_id = request.data.get('payment_method_id')
             user_id = get_member_id(request)
-            subscribed = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
+            subscribed = Subscription.objects.filter(user_id=user_id,
                                                      payment_method_id__pk=payment_method_id).exists()
             if not subscribed:
                 payment_method = PaymentMethod.objects.filter(pk=payment_method_id).first()

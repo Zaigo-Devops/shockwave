@@ -694,8 +694,7 @@ def payment_method_initialized(request):
             user_profile = UserProfile.objects.get(user_id=user_id)
             stripe_customer_id = user_profile.stripe_customer_id
             is_device_exists = Subscription.objects.filter(user_id=user_id,
-                                                           device_id__device_serial_no=device_serial_no,
-                                                           status=0).exists()
+                                                           device_id__device_serial_no=device_serial_no).exists()
             if is_device_exists:
                 if payment_method_id:
                     payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(

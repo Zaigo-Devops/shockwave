@@ -378,8 +378,9 @@ def cancel_registration(request):
                                                        device_id__device_serial_no=device_serial_no, status=1).first()
             if subscription:
                 delete_subscription(subscription.stripe_subscription_id)
-                # Subscription.objects.filter(id=subscription.id, user_id=user_id).update(status=0)
-                setattr(subscription, 'status', 0)
+                # setattr(subscription, 'status', 0)
+                subscription.status = 0
+                subscription.save()
                 return Response({'message': 'Subscription Cancelled !!!'}, status=status.HTTP_200_OK)
             else:
                 return Response({'message': 'Invalid ID Provided'}, status=status.HTTP_400_BAD_REQUEST)

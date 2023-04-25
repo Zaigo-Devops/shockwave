@@ -160,6 +160,8 @@ def is_device_registration(request):
                 return Response({"is_subscribed": False}, status=status.HTTP_200_OK)
         except Exception as e:
             print('Error Detail', str(e))
+            return Response({"is_subscribed": False, "message": "From Exception", "error": "From Exception"},
+                            status=status.HTTP_200_OK)
 
 
 class TriggerOtp(APIView):
@@ -693,7 +695,7 @@ def payment_method_initialized(request):
             stripe_customer_id = user_profile.stripe_customer_id
             is_device_exists = Subscription.objects.filter(user_id=user_id,
                                                            device_id__device_serial_no=device_serial_no,
-                                                           status=0).exists()
+                                                           status=1).exists()
             if not is_device_exists:
                 if payment_method_id:
                     payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
@@ -726,7 +728,7 @@ def payment_method_initialized(request):
 
                     register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
                                                             device_price_id=stripe_product_price_id)
-                    subscription = Subscription.objects.create(status=0, device_id=register_device, user_id=user,
+                    subscription = Subscription.objects.create(status=1, device_id=register_device, user_id=user,
                                                                payment_method_id=payment_method,
                                                                stripe_payment_id=stripe_payment_id,
                                                                stripe_subscription_id=stripe_Subscription_id['id'],

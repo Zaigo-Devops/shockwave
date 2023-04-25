@@ -546,7 +546,7 @@ def previous_connected_list(request):
     if request.method == 'GET':
         try:
             user_id = get_member_id(request)
-            subscriptions = Subscription.objects.filter(user_id=user_id)
+            subscriptions = Subscription.objects.filter(user_id=user_id, status=1)
             final_list = []
             for subscription in subscriptions:
                 registered_list = {'subscription_id': subscription.id,

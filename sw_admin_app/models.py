@@ -127,3 +127,10 @@ class SubscriptionPeriod(models.Model):
     end_date = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class DevicePrice(models.Model):
+    price = models.FloatField(default=0.0)
+
+    def __str__(self):
+        return str(self.price)

@@ -3,13 +3,13 @@ from django.contrib.admin.actions import delete_selected
 from django.shortcuts import render
 from django.urls import reverse
 
-from sw_admin_app.models import Device, Subscription, PaymentMethod
+from sw_admin_app.models import Device, Subscription, PaymentMethod, DevicePrice
 from sw_api_app.stripe import create_product, create_price, delete_subscription
 
 
 class DeviceAdmin(admin.ModelAdmin):
     model = Device
-    fields = ('device_name', 'device_serial_no',)
+    fields = ('device_name', 'device_serial_no')
     list_display = ('device_name', 'device_serial_no',)
     actions_on_top = False
     actions_on_bottom = False
@@ -34,6 +34,17 @@ class DeviceAdmin(admin.ModelAdmin):
     #     price_id = create_price(25, 'usd', 'month', product_id)['id']
     #     obj.device_price_id = price_id
     #     obj.save()
+
+
+class DevicePriceAdmin(admin.ModelAdmin):
+    model = DevicePrice
+    fields = ['price']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class SubscriptionAdmin(admin.ModelAdmin):
@@ -76,3 +87,4 @@ class SubscriptionAdmin(admin.ModelAdmin):
 admin.site.register(Device, DeviceAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(PaymentMethod)
+admin.site.register(DevicePrice, DevicePriceAdmin)

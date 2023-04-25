@@ -366,14 +366,14 @@ def session_setup(request):
 
 
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def cancel_registration(request):
     if request.method == 'POST':
         try:
             user_id = get_member_id(request)
             device_serial_no = request.data['device_serial_no']
             subscription = Subscription.objects.filter(user_id=user_id,
-                                                       device_id__device_serial_no=device_serial_no).first()
+                                                       device_id__device_serial_no=device_serial_no, status=1).first()
             if subscription:
                 delete_subscription(subscription.stripe_subscription_id)
                 # Subscription.objects.filter(id=subscription.id, user_id=user_id).update(status=0)

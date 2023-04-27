@@ -8,7 +8,7 @@ from django.db.models import Subquery, OuterRef, Max, Min
 
 from SHOCK_WAVE import settings
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
-    UserProfile
+    UserProfile, DevicePrice
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
@@ -681,6 +681,18 @@ def my_payment_method(request):
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+""" function for get the updated price for recuring"""
+
+
+def device_price_update():
+    device_price = DevicePrice.objects.order_by('-created_at').first()
+    if device_price:
+        price = int(device_price.price * 100)
+    else:
+        price = '2500'
+    return price
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def payment_method_initialized(request):
@@ -708,8 +720,10 @@ def payment_method_initialized(request):
                     stripe_product_id = create_product(product_name=device_serial_no,
                                                        description=f'The {device_name},{device_serial_no} device is '
                                                                    f'registered.')['id']
+                    device_price = device_price_update()
                     stripe_product_price_id = \
-                        create_price(amount=2500, currency='usd', interval='month', product_id=stripe_product_id)['id']
+                        create_price(amount=device_price, currency='usd', interval='day',
+                                     product_id=stripe_product_id)['id']
                     stripe_Subscription_id = \
                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
                                             default_payment_method=stripe_payment_id)

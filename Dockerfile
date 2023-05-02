@@ -24,7 +24,7 @@ ENV NAME World
 
 # Run migrations for relevant database changes for the particular file commit.
 RUN yes | python3 manage.py makemigrations
-RUN python3 manage.py migrate
+# RUN python3 manage.py migrate
 
 # Run app.py when the container launches
 CMD python3 manage.py runserver 0.0.0.0:8000

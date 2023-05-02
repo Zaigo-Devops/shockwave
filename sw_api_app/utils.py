@@ -1,3 +1,4 @@
+import os
 import threading
 import smtplib
 import avinit
@@ -8,8 +9,12 @@ from django.utils import timezone
 from django.core.files.base import File
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+from SHOCK_WAVE import settings
 from SHOCK_WAVE.settings import EMAIL_PORT, EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
 import datetime
+
+from django.core.mail import send_mail
 
 INACTIVE = 0
 ACTIVE = 1
@@ -35,21 +40,21 @@ class SendMailNotification(threading.Thread):
             user_name = self.user.first_name + " " + self.user.last_name
             context = {'name': user_name,
                        'otp': self.otp}
-            sender = 'abinaya@zaigoinfotech.com'
+            # sender = 'abinaya@zaigoinfotech.com'
             recipients = [mail_to]
-            subject = 'Reg: ShockWave Password Reset'
+            subject = 'Reg: ShockAlert Password Reset'
             message = mark_safe(render_to_string('email/user_reset_password.html', context))
 
-            # Create the message object
-            msg = MIMEMultipart()
-            msg['From'] = sender
-            msg['To'] = ', '.join(recipients)
-            msg['Subject'] = subject
-            msg.attach(MIMEText(message, 'html'))
-            with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
-                server.starttls()
-                server.login(EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)
-                server.sendmail(sender, recipients, msg.as_string())
+            recipient = recipients
+            subject = subject
+            html_message = message
+            email_status = send_mail(
+                subject,
+                None,
+                settings.DEFAULT_FROM_EMAIL,
+                recipient,
+                html_message=html_message
+            )
 
         except Exception as e:
             print("error:", str(e))

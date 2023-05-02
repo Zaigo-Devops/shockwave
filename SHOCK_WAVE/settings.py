@@ -146,6 +146,7 @@ EMAIL_PORT = str(os.getenv('EMAIL_PORT'))
 EMAIL_HOST_USER = str(os.getenv('EMAIL_HOST_USER'))
 EMAIL_HOST_PASSWORD = str(os.getenv('EMAIL_HOST_PASSWORD'))
 MY_DOMAIN = str(os.getenv('MY_DOMAIN'))
+DEFAULT_FROM_EMAIL = str(os.getenv('DEFAULT_FROM_EMAIL'))
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

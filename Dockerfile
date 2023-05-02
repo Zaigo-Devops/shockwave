@@ -23,7 +23,7 @@ EXPOSE 8000
 ENV NAME World
 
 # Run migrations for relevant database changes for the particular file commit.
-RUN yes | python3 manage.py makemigrations
+# RUN yes | python3 manage.py makemigrations
 # RUN python3 manage.py migrate
 
 # Run app.py when the container launches

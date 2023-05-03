@@ -34,5 +34,6 @@ urlpatterns = [
     path('change_password/', views.change_password),
     path('pdf_export/', views.export_session_data_history_as_pdf),
     path('session_data_detailed_history/', views.get_session_detail_history_for_graph),
-    path('cancel_payment_method/', views.cancel_payment_method)
+    path('cancel_payment_method/', views.cancel_payment_method),
+    path('activate_device/', views.activate_device)
 ]

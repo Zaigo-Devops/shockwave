@@ -1,10 +1,13 @@
+import binascii
 import datetime
+import hashlib
 from datetime import timedelta
 from itertools import count
 
 import stripe
 from django.contrib.auth.models import User
 from django.db.models import Subquery, OuterRef, Max, Min
+from ecdsa import SigningKey, NIST256p
 
 from SHOCK_WAVE import settings
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
@@ -922,3 +925,55 @@ def cancel_payment_method(request):
                 return Response({"message": "Oops!! This payment details is already subscribed"})
         except Exception as e:
             return Response({'Error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def activate_device(request):
+    device_serial_no = request.data.get('device_serial_no', None)
+    device_value = request.data.get('device_value', None)
+    if not device_serial_no:
+        return Response({"status": "failure", "error": "Device Serial Number is missing"}, status.HTTP_400_BAD_REQUEST)
+    if not device_value:
+        return Response({"status": "failure", "error": "Device Value is missing"}, status.HTTP_400_BAD_REQUEST)
+    user_id = get_member_id(request)
+    subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
+                                               status=1).order_by(
+        '-created_at').first()
+    if not subscription:
+        return Response({"status": "failure", "error": "Subscription is not exist/active"}, status.HTTP_400_BAD_REQUEST)
+    end_date = subscription.end_date
+    difference_in_days = (timezone.now().today() - end_date).days
+    if difference_in_days >= 0:
+        text_to_replaced = 1.5 * difference_in_days
+        text_to_be_replaced = "{:02}".format(text_to_replaced)
+        device_value_list = list(device_value)
+        device_value_list[2] = text_to_be_replaced[0]
+        device_value_list[3] = text_to_be_replaced[1]
+        device_value = "".join(device_value_list)
+        hex_value = generate_hex_string(device_value)
+        if not hex_value:
+            return Response({"status": "failure", "error": "Unable to get the device code"},
+                            status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "success", "message": "Device Activated", "updated_device_value": hex_value[0],
+                         "device_code": hex_value[1]}, status.HTTP_200_OK)
+    return Response({"status": "failure", "error": "Unable to get the response"}, status.HTTP_400_BAD_REQUEST)
+
+
+def generate_hex_string(value):
+    sk = SigningKey.generate(curve=NIST256p)
+    sk.from_pem("""
+             -----BEGIN EC PRIVATE KEY-----
+             MHcCAQEEIMaGe/ECPfwLyz1XAodBt3Y9VIAYA+R5zr8anbb79GqBoAoGCCqGSM49
+             AwEHoUQDQgAECwqZsBUJpT1Yua2PKB9+djq+l6iQbiVbnfCPMaEUyyv5GHt3srFp
+             HKhFVov1O8k6mw+2rMdybjfwtBx8NXZbIg==
+             -----END EC PRIVATE KEY-----
+            """)
+    hex_string = value
+    if len(hex_string) == 20:
+        msg = bytearray.fromhex(hex_string)
+        sig = sk.sign(msg, hashfunc=hashlib.sha256)
+        value_string = binascii.hexlify(msg)
+        encoded_string = binascii.hexlify(sig)
+        return value_string, encoded_string
+    return None

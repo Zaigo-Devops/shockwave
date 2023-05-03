@@ -24,3 +24,4 @@ avinit==1.3.0
 CairoSVG==2.5.2
 wkhtmltopdf==0.2
 pdfkit==1.0.0
+ecdsa==0.18.0

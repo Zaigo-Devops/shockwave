@@ -4,6 +4,7 @@ import hashlib
 from datetime import timedelta
 from itertools import count
 
+import pytz
 import stripe
 from django.contrib.auth.models import User
 from django.db.models import Subquery, OuterRef, Max, Min
@@ -668,7 +669,8 @@ def payment_method_creation(request):
                  "card_last4_number": card_last4_number},
                 status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'status': "failure", "error": str(e), 'message': str(e)},
+            error_msg = str(e).split(":")[1].strip()
+            return Response({"status": "failure", "error": error_msg, "message": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -725,7 +727,7 @@ def payment_method_initialized(request):
                                                                    f'registered.')['id']
                     device_price = device_price_update()
                     stripe_product_price_id = \
-                        create_price(amount=device_price, currency='usd', interval='day',
+                        create_price(amount=device_price, currency='usd', interval='month',
                                      product_id=stripe_product_id)['id']
                     stripe_Subscription_id = \
                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
@@ -758,7 +760,9 @@ def payment_method_initialized(request):
             else:
                 return Response({"message": "This device is already Subscribed"}, status=status.HTTP_200_OK)
     except Exception as e:
-        return Response({"status": "failure", "error": str(e), "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        error_msg = str(e).split(":")[1].strip()
+        return Response({"status": "failure", "error": error_msg, "message": error_msg},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 # @api_view(['POST'])
@@ -888,22 +892,41 @@ def get_session_detail_history_for_graph(request):
         params = {
             "device_id": active_device_id
         }
-
     if active_device_id.session_set.count() > 1:
 
         get_max_highest_energy_level_query = SessionData.objects.filter(session_id=OuterRef('session_id'),
                                                                         device_id=OuterRef('device_id')).order_by(
             '-highest_energy_level').values('id')
-        session_data = SessionData.objects.filter(**params).filter(
+        session_datas = SessionData.objects.filter(**params).filter(
             id=Subquery(get_max_highest_energy_level_query[:1])).values(
             'created_at', 'highest_energy_level')
+
+        highest_session_data = utc_to_ist_timezone(session_datas)
     else:
-        session_data = list(
+        session_datas = list(
             SessionData.objects.filter(device_id=active_device_id).order_by('-highest_energy_level').values(
                 'created_at', 'highest_energy_level')[:10])
-        session_data.reverse()
+
+        highest_session_data = utc_to_ist_timezone(session_datas)
+        highest_session_data.reverse()
+
     # session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
-    return Response(session_data, status.HTTP_200_OK)
+
+    return Response(highest_session_data, status.HTTP_200_OK)
+
+
+def utc_to_ist_timezone(session_datas):
+    session_data_list = []
+    ist = pytz.timezone('Asia/Kolkata')
+    for session_data in session_datas:
+        session_data_dict = {}
+        created_at_utc = session_data['created_at'].replace(tzinfo=pytz.utc)
+        created_at_ist = created_at_utc.astimezone(ist)
+        session_data['created_at'] = created_at_ist
+        session_data_dict['created_at'] = session_data['created_at']
+        session_data_dict['highest_energy_level'] = session_data['highest_energy_level']
+        session_data_list.append(session_data_dict)
+    return session_data_list
 
 
 @api_view(['POST'])

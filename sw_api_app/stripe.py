@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from sw_admin_app.models import Subscription, SubscriptionPeriod
 from sw_api_app.utils import ACTIVE, unix_timestamp_format
-
+from rest_framework import status
 stripe.api_key = STRIPE_SECRET_KEY
 
 
@@ -26,7 +26,7 @@ def stripe_webhook(request):
     except Exception as e:
         # Invalid payload
         print("except value msg", str(e))
-        return Response({'msg': str(e)}, status=400)
+        return Response({'error message': str(e),"endpoint_secret":endpoint_secret,"sig_header": sig_header,"payload":payload}, status=status.HTTP_400_BAD_REQUEST)
 
     if event.type == 'payment_intent.succeeded':
         payment_intent = event.data.object  # contains a stripe.PaymentIntent
@@ -56,7 +56,7 @@ def stripe_webhook(request):
                                               end_date=end_date)
     else:
         print('Unhandled event type {}'.format(event.type))
-    return Response(status=200)
+    return Response(status=status.HTTP_200_OK)
 
 
 def create_payment_customer(name, email, payment_method=None, phone=None):

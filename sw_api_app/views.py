@@ -966,21 +966,25 @@ def activate_device(request):
     if not subscription:
         return Response({"status": "failure", "error": "Subscription is not exist/active"}, status.HTTP_400_BAD_REQUEST)
     end_date = subscription.end_date
-    difference_in_days = (timezone.now().today() - end_date).days
+    difference_in_days = (end_date - timezone.now()).days
+    # difference_in_days = (datetime.date.today() - end_date).days
     if difference_in_days >= 0:
         text_to_replaced = 1.5 * difference_in_days
-        text_to_be_replaced = "{:02}".format(text_to_replaced)
+        text_to_be_replaced = "{:02}".format(int(text_to_replaced))
         device_value_list = list(device_value)
         device_value_list[2] = text_to_be_replaced[0]
         device_value_list[3] = text_to_be_replaced[1]
         device_value = "".join(device_value_list)
+        print("Updated device value", device_value)
         hex_value = generate_hex_string(device_value)
         if not hex_value:
             return Response({"status": "failure", "error": "Unable to get the device code"},
                             status.HTTP_400_BAD_REQUEST)
         return Response({"status": "success", "message": "Device Activated", "updated_device_value": hex_value[0],
                          "device_code": hex_value[1]}, status.HTTP_200_OK)
-    return Response({"status": "failure", "error": "Unable to get the response"}, status.HTTP_400_BAD_REQUEST)
+    return Response(
+        {"status": "failure", "error": f"Unable to get the response as subscription days left is {difference_in_days}"},
+        status.HTTP_400_BAD_REQUEST)
 
 
 def generate_hex_string(value):
@@ -993,6 +997,7 @@ def generate_hex_string(value):
              -----END EC PRIVATE KEY-----
             """)
     hex_string = value
+    print("Length of Hex String", len(hex_string))
     if len(hex_string) == 20:
         msg = bytearray.fromhex(hex_string)
         sig = sk.sign(msg, hashfunc=hashlib.sha256)

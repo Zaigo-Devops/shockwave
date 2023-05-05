@@ -981,7 +981,7 @@ def activate_device(request):
             return Response({"status": "failure", "error": "Unable to get the device code"},
                             status.HTTP_400_BAD_REQUEST)
         return Response({"status": "success", "message": "Device Activated", "updated_device_value": hex_value[0],
-                         "device_code": hex_value[1]}, status.HTTP_200_OK)
+                         "device_code": hex_value[1].upper()}, status.HTTP_200_OK)
     return Response(
         {"status": "failure", "error": f"Unable to get the response as subscription days left is {difference_in_days}"},
         status.HTTP_400_BAD_REQUEST)

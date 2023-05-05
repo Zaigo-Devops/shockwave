@@ -969,7 +969,7 @@ def activate_device(request):
     # difference_in_days = (datetime.date.today() - end_date).days
     if difference_in_days >= 0:
         text_to_replaced = 1.5 * difference_in_days
-        hex_conversion = hex(int(text_to_replaced))
+        hex_conversion = hex(int(text_to_replaced))[2:]
         text_to_be_replaced = hex_conversion.zfill(2)
         device_value_list = list(device_value)
         device_value_list[2] = text_to_be_replaced[0]

@@ -17,7 +17,7 @@ from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializ
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
     create_address, create_product, create_price, create_subscription, delete_stripe_payment_method
-from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
+from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, get_recuring_periods, \
     unix_timestamp_format
 
 from django.contrib.auth import authenticate
@@ -731,19 +731,19 @@ def payment_method_initialized(request):
                     stripe_Subscription_id = \
                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
                                             default_payment_method=stripe_payment_id)
-
-                    # Pay Latest Invoice of Subscription
-                    invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)
-                    # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
-                    # need to register the device in our table
-                    try:
-                        start_date = unix_timestamp_format(
-                            invoice.lines.data[0].period.start)
-                        end_date = unix_timestamp_format(
-                            invoice.lines.data[0].period.end)
-                    except:
-                        start_date = datetime.date.today()
-                        end_date = start_date + datetime.timedelta(days=30)
+                        
+                    if stripe_Subscription_id.status == "active":
+                        recuring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,stripe_Subscription_id.current_period_end)
+                        start_date = recuring_period["start_date"]
+                        end_date = recuring_period["end_date"]
+                    else:
+                        # Pay Latest Invoice of Subscription 
+                        invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice) # Invoice already not paid
+                        # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
+                        # need to register the device in our table
+                        recuring_period = get_recuring_periods(invoice.lines.data[0].period.start,invoice.lines.data[0].period.end)
+                        start_date = recuring_period["start_date"]
+                        end_date = recuring_period["end_date"]
 
                     register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
                                                             device_price_id=stripe_product_price_id)
@@ -759,7 +759,10 @@ def payment_method_initialized(request):
             else:
                 return Response({"message": "This device is already Subscribed"}, status=status.HTTP_200_OK)
     except Exception as e:
-        error_msg = str(e).split(":")[1].strip()
+        error_msg = str(e)
+        split_error_msg= str(e).split(":")
+        if len(split_error_msg) > 1:
+            error_msg = split_error_msg[1].strip()
         return Response({"status": "failure", "error": error_msg, "message": error_msg},
                         status=status.HTTP_400_BAD_REQUEST)
 

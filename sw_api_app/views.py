@@ -408,8 +408,7 @@ def session_data_save(request, session_id):
             # device = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').first()
             subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
                                                        status=1).order_by('-created_at').first()
-            device = subscription.device_id
-            if device:
+            if subscription.device_id:
                 user = User.objects.filter(pk=user_id).first()
                 session = Session.objects.filter(pk=session_id).first()
                 # session data value provide as list so save as json with key "energy_levels"
@@ -419,7 +418,7 @@ def session_data_save(request, session_id):
                 high_energy_level = max(energy_list)
                 session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
                                                           highest_energy_level=high_energy_level, session_id=session,
-                                                          device_id=device, user_id=user)
+                                                          device_id_id=subscription.device_id, user_id=user)
                 end_date = session_data.created_at
                 Session.objects.filter(pk=session_id).update(session_end_date=end_date)
                 return Response({"message": "Session Data Save Successfully"}, status=status.HTTP_200_OK)
@@ -828,39 +827,39 @@ def export_session_data_history_as_pdf(request):
             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
         response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
         response['data'] = generate_user_cards(response['data'], True)
-        if export_data:
-            # context = {'datas': response['data']}
-            # return render(request, 'email/export.html', context)
-            session_list = []
-            for data in response['data']:
-                session_data = {}
-                session_data.update({"device_id": data["device_serial_no"]})
-                session_data.update({"device_name": data["device_name"]})
-                session_data.update({"environment": data["environment"]})
-                session_data.update({"highest_energy_level": data["highest_energy_level"]})
-                session_data.update({"lowest_energy_level": data["lowest_energy_level"]})
-                session_data.update({"session_date": data["created_at"]})
-                session_list.append(session_data)
-            initial_session_data = sub_device.first()
-            if initial_session_data:
-                location = initial_session_data.session_id.location
-                device_name = initial_session_data.device_id.device_name
-                session_id = initial_session_data.session_id.pk
-                environment = initial_session_data.session_id.environment
-            else:
-                location = device_name = session_id = environment = "-"
-            context = {'datas': session_list,
-                       'location': location,
-                       'device_name': device_name,
-                       'session_id': session_id,
-                       'environment': environment}
-            html_string = render_to_string('email/export.html', context)
-            # Convert the HTML to a PDF and save it to a file
-            file_name = f'media/{session_id}_{timezone.now().strftime("%Y%m%d%s%f")}.pdf'
-            d = pdfkit.from_string(html_string, file_name)
-            # Send the PDF file as a response to the user
-            url = f'{settings.MY_DOMAIN}{file_name}'
-            return Response({"url": url}, status.HTTP_200_OK)
+        # if export_data:
+        # context = {'datas': response['data']}
+        # return render(request, 'email/export.html', context)
+        session_list = []
+        for data in response['data']:
+            session_data = {}
+            session_data.update({"device_id": data["device_serial_no"]})
+            session_data.update({"device_name": data["device_name"]})
+            session_data.update({"environment": data["environment"]})
+            session_data.update({"highest_energy_level": data["highest_energy_level"]})
+            session_data.update({"lowest_energy_level": data["lowest_energy_level"]})
+            session_data.update({"session_date": data["created_at"]})
+            session_list.append(session_data)
+        initial_session_data = sub_device.first()
+        if initial_session_data:
+            location = initial_session_data.session_id.location
+            device_name = initial_session_data.device_id.device_name
+            session_id = initial_session_data.session_id.pk
+            environment = initial_session_data.session_id.environment
+        else:
+            location = device_name = session_id = environment = "-"
+        context = {'datas': session_list,
+                   'location': location,
+                   'device_name': device_name,
+                   'session_id': session_id,
+                   'environment': environment}
+        html_string = render_to_string('email/export.html', context)
+        # Convert the HTML to a PDF and save it to a file
+        file_name = f'media/{session_id}_{timezone.now().strftime("%Y%m%d%s%f")}.pdf'
+        d = pdfkit.from_string(html_string, file_name)
+        # Send the PDF file as a response to the user
+        url = f'{settings.MY_DOMAIN}{file_name}'
+        return Response({"url": url}, status.HTTP_200_OK)
     return Response({"data": "NO data"})
 
 

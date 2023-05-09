@@ -668,7 +668,10 @@ def payment_method_creation(request):
                  "card_last4_number": card_last4_number},
                 status=status.HTTP_200_OK)
         except Exception as e:
-            error_msg = str(e).split(":")[1].strip()
+            error_msg = str(e)
+            split_error_msg = str(e).split(":")
+            if len(split_error_msg) > 1:
+                error_msg = split_error_msg[1].strip()
             return Response({"status": "failure", "error": error_msg, "message": error_msg},
                             status=status.HTTP_400_BAD_REQUEST)
 

@@ -730,7 +730,7 @@ def payment_method_initialized(request):
                                                                    f'registered.')['id']
                     device_price = device_price_update()
                     stripe_product_price_id = \
-                        create_price(amount=device_price, currency='usd', interval='month',
+                        create_price(amount=device_price, currency='usd', interval='day',
                                      product_id=stripe_product_id)['id']
                     stripe_Subscription_id = \
                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,

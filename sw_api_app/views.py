@@ -418,7 +418,7 @@ def session_data_save(request, session_id):
                 high_energy_level = max(energy_list)
                 session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
                                                           highest_energy_level=high_energy_level, session_id=session,
-                                                          device_id_id=subscription.device_id, user_id=user)
+                                                          device_id_id=subscription.device_id.id, user_id=user)
                 end_date = session_data.created_at
                 Session.objects.filter(pk=session_id).update(session_end_date=end_date)
                 return Response({"message": "Session Data Save Successfully"}, status=status.HTTP_200_OK)

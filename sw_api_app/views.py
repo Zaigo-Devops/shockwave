@@ -1008,3 +1008,25 @@ def generate_hex_string(value):
         encoded_string = binascii.hexlify(sig)
         return value_string, encoded_string
     return None
+
+
+@api_view(['POST'])
+def exe_script_value(request):
+    import os
+    import subprocess
+    
+    device_value = "01073F3CDFA8259E770B"
+    exe_path = "LicenseUnlock.exe"
+    # exe_path = "./LicenseUnlock"
+    os.chmod(exe_path, 0o755)
+    command = [exe_path, device_value]
+    result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    if result.returncode == 0:
+        message = "Execution succeeded"
+        return Response({'message': message,"data":result.stdout.decode()}, status=status.HTTP_200_OK)
+    else:
+        message = "Execution failed with code"
+        error = f"'Execution failed with code', {result.returncode}"
+        print(result.stderr.decode())
+        return Response({'message': message,"data":result.stderr.decode(),"error":error}, status=status.HTTP_200_OK)

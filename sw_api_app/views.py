@@ -734,17 +734,19 @@ def payment_method_initialized(request):
                     stripe_Subscription_id = \
                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
                                             default_payment_method=stripe_payment_id)
-                        
+
                     if stripe_Subscription_id.status == "active":
-                        recuring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,stripe_Subscription_id.current_period_end)
+                        recuring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,
+                                                               stripe_Subscription_id.current_period_end)
                         start_date = recuring_period["start_date"]
                         end_date = recuring_period["end_date"]
                     else:
                         # Pay Latest Invoice of Subscription 
-                        invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice) # Invoice already not paid
+                        invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)  # Invoice already not paid
                         # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
                         # need to register the device in our table
-                        recuring_period = get_recuring_periods(invoice.lines.data[0].period.start,invoice.lines.data[0].period.end)
+                        recuring_period = get_recuring_periods(invoice.lines.data[0].period.start,
+                                                               invoice.lines.data[0].period.end)
                         start_date = recuring_period["start_date"]
                         end_date = recuring_period["end_date"]
 
@@ -1011,3 +1013,13 @@ def generate_hex_string(value):
         encoded_string = binascii.hexlify(sig)
         return value_string, encoded_string
     return None
+
+
+@api_view(['GET'])
+def user_subscription_period_list(request):
+    if request.method == "GET":
+        data = request.data.GET
+        subscription_id = data.get('subscription_id', None)
+        user_id = get_member_id(request)
+        user_sub_list = Subscription.objects.filter(subscription_id=subscription_id, user_id=user_id)
+        return Response("test")

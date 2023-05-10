@@ -993,41 +993,37 @@ def activate_device(request):
         status.HTTP_400_BAD_REQUEST)
 
 
-def generate_hex_string(value):
-    sk = SigningKey.generate(curve=NIST256p)
-    sk.from_pem("""
-             -----BEGIN EC PRIVATE KEY-----
-             MHcCAQEEIMaGe/ECPfwLyz1XAodBt3Y9VIAYA+R5zr8anbb79GqBoAoGCCqGSM49
-             AwEHoUQDQgAECwqZsBUJpT1Yua2PKB9+djq+l6iQbiVbnfCPMaEUyyv5GHt3srFp
-             HKhFVov1O8k6mw+2rMdybjfwtBx8NXZbIg==
-             -----END EC PRIVATE KEY-----
-            """)
-    hex_string = value
-    print("Length of Hex String", len(hex_string))
-    if len(hex_string) == 20:
-        msg = bytearray.fromhex(hex_string)
-        sig = sk.sign(msg, hashfunc=hashlib.sha256)
-        value_string = binascii.hexlify(msg)
-        encoded_string = binascii.hexlify(sig)
-        return value_string, encoded_string
-    return None
+# def generate_hex_string(value):
+#     sk = SigningKey.generate(curve=NIST256p)
+#     sk.from_pem("""
+#              -----BEGIN EC PRIVATE KEY-----
+#              MHcCAQEEIMaGe/ECPfwLyz1XAodBt3Y9VIAYA+R5zr8anbb79GqBoAoGCCqGSM49
+#              AwEHoUQDQgAECwqZsBUJpT1Yua2PKB9+djq+l6iQbiVbnfCPMaEUyyv5GHt3srFp
+#              HKhFVov1O8k6mw+2rMdybjfwtBx8NXZbIg==
+#              -----END EC PRIVATE KEY-----
+#             """)
+#     hex_string = value
+#     print("Length of Hex String", len(hex_string))
+#     if len(hex_string) == 20:
+#         msg = bytearray.fromhex(hex_string)
+#         sig = sk.sign(msg, hashfunc=hashlib.sha256)
+#         value_string = binascii.hexlify(msg)
+#         encoded_string = binascii.hexlify(sig)
+#         return value_string, encoded_string
+#     return None
 
 
-@api_view(['POST'])
-def exe_script_value(request):
+def generate_hex_string(device_value):
     import os
     import subprocess
-    
-    device_value = "01073F3CDFA8259E770B"
     exe_path = "/app/LicenseUnlock"
     os.chmod(exe_path, 0o755)
     result = subprocess.run(["./LicenseUnlock", device_value], cwd=settings.BASE_DIR, capture_output=True, text=True)
-
     if result.returncode == 0:
-        message = "Execution succeeded"
-        return Response({'message': message,"data":result.stdout}, status=status.HTTP_200_OK)
+        data =  result.stdout
     else:
-        message = "Execution failed with code"
         error = f"'Execution failed with code', {result.returncode}"
-        print(result.stderr.decode())
-        return Response({'message': message,"data":result.stderr,"error":error}, status=status.HTTP_200_OK)
+        print(result.stderr)
+        print("error: " + error)
+        data = None
+    return data

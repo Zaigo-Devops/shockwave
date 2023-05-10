@@ -1019,7 +1019,8 @@ def exe_script_value(request):
     import subprocess
     
     device_value = "01073F3CDFA8259E770B"
-    exe_path = "LicenseUnlock.exe"
+    exe_path = os.path.join(settings.BASE_DIR, 'LicenseUnlock')
+    # exe_path = "LicenseUnlock.exe"
     # exe_path = "./LicenseUnlock"
     os.chmod(exe_path, 0o755)
     command = [exe_path, device_value]

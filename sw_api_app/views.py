@@ -729,7 +729,7 @@ def payment_method_initialized(request):
                                                                    f'registered.')['id']
                     device_price = device_price_update()
                     stripe_product_price_id = \
-                        create_price(amount=device_price, currency='usd', interval='day',
+                        create_price(amount=device_price, currency='usd', interval='month',
                                      product_id=stripe_product_id)['id']
                     stripe_Subscription_id = \
                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
@@ -995,24 +995,24 @@ def activate_device(request):
         status.HTTP_400_BAD_REQUEST)
 
 
-def generate_hex_string(value):
-    sk = SigningKey.generate(curve=NIST256p)
-    sk.from_pem("""
-             -----BEGIN EC PRIVATE KEY-----
-             MHcCAQEEIMaGe/ECPfwLyz1XAodBt3Y9VIAYA+R5zr8anbb79GqBoAoGCCqGSM49
-             AwEHoUQDQgAECwqZsBUJpT1Yua2PKB9+djq+l6iQbiVbnfCPMaEUyyv5GHt3srFp
-             HKhFVov1O8k6mw+2rMdybjfwtBx8NXZbIg==
-             -----END EC PRIVATE KEY-----
-            """)
-    hex_string = value
-    print("Length of Hex String", len(hex_string))
-    if len(hex_string) == 20:
-        msg = bytearray.fromhex(hex_string)
-        sig = sk.sign(msg, hashfunc=hashlib.sha256)
-        value_string = binascii.hexlify(msg)
-        encoded_string = binascii.hexlify(sig)
-        return value_string, encoded_string
-    return None
+# def generate_hex_string(value):
+#     sk = SigningKey.generate(curve=NIST256p)
+#     sk.from_pem("""
+#              -----BEGIN EC PRIVATE KEY-----
+#              MHcCAQEEIMaGe/ECPfwLyz1XAodBt3Y9VIAYA+R5zr8anbb79GqBoAoGCCqGSM49
+#              AwEHoUQDQgAECwqZsBUJpT1Yua2PKB9+djq+l6iQbiVbnfCPMaEUyyv5GHt3srFp
+#              HKhFVov1O8k6mw+2rMdybjfwtBx8NXZbIg==
+#              -----END EC PRIVATE KEY-----
+#             """)
+#     hex_string = value
+#     print("Length of Hex String", len(hex_string))
+#     if len(hex_string) == 20:
+#         msg = bytearray.fromhex(hex_string)
+#         sig = sk.sign(msg, hashfunc=hashlib.sha256)
+#         value_string = binascii.hexlify(msg)
+#         encoded_string = binascii.hexlify(sig)
+#         return value_string, encoded_string
+#     return None
 
 
 @api_view(['GET'])
@@ -1024,3 +1024,19 @@ def subscription_list(request):
             subscriptions = subscriptions.filter(Q(device_id__icontains=search) | Q(user_id__icontains=search) | Q(
                 status__icontains=search))
         return Response(subscriptions, status=status.HTTP_200_OK)
+
+
+def generate_hex_string(device_value):
+    import os
+    import subprocess
+    exe_path = "/app/LicenseUnlock"
+    os.chmod(exe_path, 0o755)
+    result = subprocess.run(["./LicenseUnlock", device_value], cwd=settings.BASE_DIR, capture_output=True, text=True)
+    if result.returncode == 0:
+        data =  result.stdout
+    else:
+        error = f"'Execution failed with code', {result.returncode}"
+        print(result.stderr)
+        print("error: " + error)
+        data = None
+    return data

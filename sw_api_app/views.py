@@ -1019,18 +1019,15 @@ def exe_script_value(request):
     import subprocess
     
     device_value = "01073F3CDFA8259E770B"
-    exe_path = os.path.join(settings.BASE_DIR, 'LicenseUnlock')
-    # exe_path = "LicenseUnlock.exe"
-    # exe_path = "./LicenseUnlock"
+    exe_path = "/app/LicenseUnlock"
     os.chmod(exe_path, 0o755)
-    command = [exe_path, device_value]
-    result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(["./LicenseUnlock", device_value], cwd=settings.BASE_DIR, capture_output=True, text=True)
 
     if result.returncode == 0:
         message = "Execution succeeded"
-        return Response({'message': message,"data":result.stdout.decode()}, status=status.HTTP_200_OK)
+        return Response({'message': message,"data":result.stdout}, status=status.HTTP_200_OK)
     else:
         message = "Execution failed with code"
         error = f"'Execution failed with code', {result.returncode}"
         print(result.stderr.decode())
-        return Response({'message': message,"data":result.stderr.decode(),"error":error}, status=status.HTTP_200_OK)
+        return Response({'message': message,"data":result.stderr,"error":error}, status=status.HTTP_200_OK)

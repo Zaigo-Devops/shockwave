@@ -12,7 +12,7 @@ from ecdsa import SigningKey, NIST256p
 
 from SHOCK_WAVE import settings
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
-    UserProfile, DevicePrice
+    UserProfile, DevicePrice, SubscriptionPeriod
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
@@ -516,6 +516,7 @@ def session_list(request):
                     if data:
                         sub_values['session'] = session.pk
                         sub_values['timestamp'] = str(qs.order_by('-highest_energy_level').first().created_at)
+                        # sub_values['timestamp'] = str(qs.order_by('created_at').first().created_at)
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         date_values.append(sub_values)
@@ -903,7 +904,7 @@ def get_session_detail_history_for_graph(request):
 
         get_max_highest_energy_level_query = SessionData.objects.filter(session_id=OuterRef('session_id'),
                                                                         device_id=OuterRef('device_id')).order_by(
-            '-highest_energy_level').values('id')
+            'created_at').values('id')
         session_datas = SessionData.objects.filter(**params).filter(
             id=Subquery(get_max_highest_energy_level_query[:1])).values(
             'created_at', 'highest_energy_level')
@@ -911,7 +912,7 @@ def get_session_detail_history_for_graph(request):
         highest_session_data = utc_to_ist_timezone(session_datas)
     else:
         session_datas = list(
-            SessionData.objects.filter(device_id=active_device_id).order_by('-highest_energy_level').values(
+            SessionData.objects.filter(device_id=active_device_id).order_by('created_at').values(
                 'created_at', 'highest_energy_level')[:10])
 
         highest_session_data = utc_to_ist_timezone(session_datas)
@@ -1018,8 +1019,8 @@ def generate_hex_string(value):
 @api_view(['GET'])
 def user_subscription_period_list(request):
     if request.method == "GET":
-        data = request.data.GET
-        subscription_id = data.get('subscription_id', None)
+        search = request.GET.get('search', None)
+        subscription_id = request.GET.get('subscription_id', None)
         user_id = get_member_id(request)
-        user_sub_list = Subscription.objects.filter(subscription_id=subscription_id, user_id=user_id)
-        return Response("test")
+        user_sub_list = SubscriptionPeriod.objects.filter(subscription_id=subscription_id, subscription_id__user_id=user_id).values()
+        return Response(user_sub_list)

@@ -25,14 +25,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserDetailSerializer(serializers.ModelSerializer):
     insurance_provider = serializers.CharField(source="user_profile.insurance_provider", read_only=True)
+    is_promotion_email = serializers.BooleanField(source="user_profile.is_promotion_email", read_only=True)
     user_address = serializers.CharField(source="user_profile.user_address", read_only=True)
     user_phone_number = serializers.CharField(source="user_profile.user_phone_number", read_only=True)
-    user_profile_image = serializers.ImageField(source="user_profile.user_profile_image", read_only=True)
+    user_profile_image = serializers.ImageField(source="user_profile.user_profile_image")
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'insurance_provider', 'user_profile_image', 'user_address',
-                  'user_phone_number')
+        fields = (
+            'id', 'email', 'first_name', 'last_name', 'insurance_provider', 'is_promotion_email', 'user_profile_image',
+            'user_address',
+            'user_phone_number')
 
     def to_representation(self, instance):
         user_image = UserProfile.objects.filter(user_id=instance.id).get()
@@ -54,11 +57,12 @@ class RegisterSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(write_only=True, required=True)
     insurance_provider = serializers.CharField(source="user_profile.insurance_provider", allow_blank=True,
                                                allow_null=True, required=False, default=None, max_length=256)
+    is_promotion_email = serializers.BooleanField(source="user_profile.is_promotion_email")
 
     class Meta:
         model = User
         fields = ('email', 'password', 'password2',
-                  'first_name', 'last_name', 'insurance_provider',)
+                  'first_name', 'last_name', 'insurance_provider', 'is_promotion_email')
         extra_kwargs = {
             'first_name': {'required': True},
             'last_name': {'required': True}
@@ -88,8 +92,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             name = user.first_name + ' ' + user.last_name
         stripe_customer_create = create_payment_customer(name=name, email=user.email)
         insurance_provider = validated_data.get('user_profile').get('insurance_provider')
+        is_promotion_email = validated_data.get('user_profile').get('is_promotion_email')
         user_phone_number = validated_data.get('user_profile').get('user_phone_number')
         user_profile = UserProfileSerializer(data={"user_id": user.pk, "insurance_provider": insurance_provider,
+                                                   "is_promotion_email": is_promotion_email,
                                                    "user_profile_image": get_attachment_from_name(user_name),
                                                    "stripe_customer_id": stripe_customer_create['id'],
                                                    "user_phone_number": user_phone_number},

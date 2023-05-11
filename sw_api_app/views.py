@@ -983,7 +983,7 @@ def activate_device(request):
         device_value_list[2] = text_to_be_replaced[0]
         device_value_list[3] = text_to_be_replaced[1]
         device_value = "".join(device_value_list)
-        print("Updated device value", device_value)
+        # print("Updated device value", device_value)
         hex_value = generate_hex_string(device_value)
         if not hex_value:
             return Response({"status": "failure", "error": "Unable to get the device code"},
@@ -999,10 +999,14 @@ def activate_device(request):
 def user_subscription_period_list(request):
     if request.method == "GET":
         search = request.GET.get('search', None)
-        subscription_id = request.GET.get('subscription_id', None)
-        user_id = get_member_id(request)
-        user_sub_list = SubscriptionPeriod.objects.filter(subscription_id=subscription_id, subscription_id__user_id=user_id).values()
-        return Response(user_sub_list)
+        subscription_period = SubscriptionPeriod.objects.order_by('-created_at')
+        if search:
+            subscription_period = subscription_period.filter(
+                Q(subscription_id__user_id__username__icontains=search) |
+                Q(subscription_id__device_id__device_serial_no__icontains=search) |
+                Q(subscription_id__stripe_subscription_id__icontains=search) |
+                Q(subscription_id__stripe_customer_id__icontains=search))
+        return Response(subscription_period.values(), status=status.HTTP_200_OK)
 
 
 # def generate_hex_string(value):

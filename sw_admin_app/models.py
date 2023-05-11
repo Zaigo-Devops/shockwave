@@ -102,6 +102,7 @@ class UserProfile(models.Model):
     user_id = models.OneToOneField(User, on_delete=models.SET_NULL, default=None, null=True,
                                    related_name="user_profile")
     insurance_provider = models.CharField(max_length=256, null=True, default=None)
+    is_promotion_email = models.BooleanField(default=True, null=True)
     user_profile_image = models.ImageField(default=None, null=True, blank=True)
     user_address = models.TextField(blank=True, null=True, default=None)
     user_phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True,

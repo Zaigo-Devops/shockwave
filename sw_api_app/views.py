@@ -1033,7 +1033,7 @@ def generate_hex_string(device_value):
     os.chmod(exe_path, 0o755)
     result = subprocess.run(["./LicenseUnlock", device_value], cwd=settings.BASE_DIR, capture_output=True, text=True)
     if result.returncode == 0:
-        data =  result.stdout
+        data =  str(result.stdout).strip()
     else:
         error = f"'Execution failed with code', {result.returncode}"
         print(result.stderr)

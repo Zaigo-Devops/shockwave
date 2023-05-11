@@ -7,7 +7,7 @@ from itertools import count
 import pytz
 import stripe
 from django.contrib.auth.models import User
-from django.db.models import Subquery, OuterRef, Max, Min
+from django.db.models import Subquery, OuterRef, Max, Min, Q
 from ecdsa import SigningKey, NIST256p
 
 from SHOCK_WAVE import settings
@@ -516,7 +516,6 @@ def session_list(request):
                     if data:
                         sub_values['session'] = session.pk
                         sub_values['timestamp'] = str(qs.order_by('-highest_energy_level').first().created_at)
-                        # sub_values['timestamp'] = str(qs.order_by('created_at').first().created_at)
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         date_values.append(sub_values)
@@ -996,26 +995,6 @@ def activate_device(request):
         status.HTTP_400_BAD_REQUEST)
 
 
-def generate_hex_string(value):
-    sk = SigningKey.generate(curve=NIST256p)
-    sk.from_pem("""
-             -----BEGIN EC PRIVATE KEY-----
-             MHcCAQEEIMaGe/ECPfwLyz1XAodBt3Y9VIAYA+R5zr8anbb79GqBoAoGCCqGSM49
-             AwEHoUQDQgAECwqZsBUJpT1Yua2PKB9+djq+l6iQbiVbnfCPMaEUyyv5GHt3srFp
-             HKhFVov1O8k6mw+2rMdybjfwtBx8NXZbIg==
-             -----END EC PRIVATE KEY-----
-            """)
-    hex_string = value
-    print("Length of Hex String", len(hex_string))
-    if len(hex_string) == 20:
-        msg = bytearray.fromhex(hex_string)
-        sig = sk.sign(msg, hashfunc=hashlib.sha256)
-        value_string = binascii.hexlify(msg)
-        encoded_string = binascii.hexlify(sig)
-        return value_string, encoded_string
-    return None
-
-
 @api_view(['GET'])
 def user_subscription_period_list(request):
     if request.method == "GET":
@@ -1024,3 +1003,50 @@ def user_subscription_period_list(request):
         user_id = get_member_id(request)
         user_sub_list = SubscriptionPeriod.objects.filter(subscription_id=subscription_id, subscription_id__user_id=user_id).values()
         return Response(user_sub_list)
+
+
+# def generate_hex_string(value):
+#     sk = SigningKey.generate(curve=NIST256p)
+#     sk.from_pem("""
+#              -----BEGIN EC PRIVATE KEY-----
+#              MHcCAQEEIMaGe/ECPfwLyz1XAodBt3Y9VIAYA+R5zr8anbb79GqBoAoGCCqGSM49
+#              AwEHoUQDQgAECwqZsBUJpT1Yua2PKB9+djq+l6iQbiVbnfCPMaEUyyv5GHt3srFp
+#              HKhFVov1O8k6mw+2rMdybjfwtBx8NXZbIg==
+#              -----END EC PRIVATE KEY-----
+#             """)
+#     hex_string = value
+#     print("Length of Hex String", len(hex_string))
+#     if len(hex_string) == 20:
+#         msg = bytearray.fromhex(hex_string)
+#         sig = sk.sign(msg, hashfunc=hashlib.sha256)
+#         value_string = binascii.hexlify(msg)
+#         encoded_string = binascii.hexlify(sig)
+#         return value_string, encoded_string
+#     return None
+
+
+@api_view(['GET'])
+def subscription_list(request):
+    if request.method == 'GET':
+        search = request.GET.get('search', None)
+        subscriptions = Subscription.objects.all().values()
+        if search:
+            subscriptions = subscriptions.filter(Q(device_id__icontains=search) | Q(user_id__icontains=search) | Q(
+                status__icontains=search))
+        return Response(subscriptions, status=status.HTTP_200_OK)
+
+
+def generate_hex_string(device_value):
+    import os
+    import subprocess
+    exe_path = "/app/LicenseUnlock"
+    os.chmod(exe_path, 0o755)
+    result = subprocess.run(["./LicenseUnlock", device_value], cwd=settings.BASE_DIR, capture_output=True, text=True)
+    if result.returncode == 0:
+        data =  result.stdout
+    else:
+        error = f"'Execution failed with code', {result.returncode}"
+        print(result.stderr)
+        print("error: " + error)
+        data = None
+    return data

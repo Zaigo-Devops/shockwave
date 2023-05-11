@@ -988,8 +988,8 @@ def activate_device(request):
         if not hex_value:
             return Response({"status": "failure", "error": "Unable to get the device code"},
                             status.HTTP_400_BAD_REQUEST)
-        return Response({"status": "success", "message": "Device Activated", "updated_device_value": hex_value[0],
-                         "device_code": hex_value[1].upper()}, status.HTTP_200_OK)
+        return Response({"status": "success", "message": "Device Activated", "updated_device_value": device_value,
+                         "device_code": hex_value.upper()}, status.HTTP_200_OK)
     return Response(
         {"status": "failure", "error": f"Unable to get the response as subscription days left is {difference_in_days}"},
         status.HTTP_400_BAD_REQUEST)
@@ -1029,11 +1029,12 @@ def user_subscription_period_list(request):
 def subscription_list(request):
     if request.method == 'GET':
         search = request.GET.get('search', None)
-        subscriptions = Subscription.objects.all().values()
+        subscriptions = Subscription.objects.order_by('-created_at')
         if search:
-            subscriptions = subscriptions.filter(Q(device_id__icontains=search) | Q(user_id__icontains=search) | Q(
-                status__icontains=search))
-        return Response(subscriptions, status=status.HTTP_200_OK)
+            subscriptions = subscriptions.filter(
+                Q(device_id__device_name__icontains=search) | Q(user_id__username__icontains=search) | Q(
+                    status__icontains=search))
+        return Response(subscriptions.values(), status=status.HTTP_200_OK)
 
 
 def generate_hex_string(device_value):
@@ -1043,7 +1044,7 @@ def generate_hex_string(device_value):
     os.chmod(exe_path, 0o755)
     result = subprocess.run(["./LicenseUnlock", device_value], cwd=settings.BASE_DIR, capture_output=True, text=True)
     if result.returncode == 0:
-        data =  result.stdout
+        data = result.stdout
     else:
         error = f"'Execution failed with code', {result.returncode}"
         print(result.stderr)

@@ -621,14 +621,6 @@ def device_session_data_history(request):
     return Response({"data": "No Data", "message": "No Subscribed device against the user"})
 
 
-# def validate(card_number):
-#     if not card_number.isdigit():
-#         return Response("Invalid input: card number should only contain digits", status=status.HTTP_400_BAD_REQUEST)
-#     # add more validation logic here if needed
-#     return card_number
-
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def payment_method_creation(request):
@@ -636,9 +628,6 @@ def payment_method_creation(request):
         try:
             card_type = request.data.get('card_type', None)
             card_number = request.data.get('card_number', None)
-            print('card_number', card_number)
-            if not card_number.isdigit():
-                return Response("Invalid input: Card number should only contain digits", status=status.HTTP_400_BAD_REQUEST)
             card_exp_month = request.data.get('card_exp_month', None)
             card_exp_year = request.data.get('card_exp_year', None)
             card_cvc = request.data.get('card_cvc', None)

@@ -976,9 +976,10 @@ def activate_device(request):
     difference_in_days = (end_date - timezone.now()).days
     # difference_in_days = (datetime.date.today() - end_date).days
     if difference_in_days >= 0:
-        text_to_replaced = 1.5 * difference_in_days
-        hex_conversion = hex(int(text_to_replaced))[2:]
-        text_to_be_replaced = hex_conversion.zfill(2)
+        # text_to_replaced = 1.5 * difference_in_days
+        # hex_conversion = hex(int(text_to_replaced))[2:]
+        # text_to_be_replaced = hex_conversion.zfill(2)
+        text_to_be_replaced = "02"
         device_value_list = list(device_value)
         device_value_list[2] = text_to_be_replaced[0]
         device_value_list[3] = text_to_be_replaced[1]
@@ -1048,7 +1049,7 @@ def generate_hex_string(device_value):
     os.chmod(exe_path, 0o755)
     result = subprocess.run(["./LicenseUnlock", device_value], cwd=settings.BASE_DIR, capture_output=True, text=True)
     if result.returncode == 0:
-        data = result.stdout
+        data =  str(result.stdout).strip()
     else:
         error = f"'Execution failed with code', {result.returncode}"
         print(result.stderr)

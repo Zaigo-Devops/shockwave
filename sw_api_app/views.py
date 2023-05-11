@@ -1019,11 +1019,12 @@ def activate_device(request):
 def subscription_list(request):
     if request.method == 'GET':
         search = request.GET.get('search', None)
-        subscriptions = Subscription.objects.all().values()
+        subscriptions = Subscription.objects.order_by('-created_at')
         if search:
-            subscriptions = subscriptions.filter(Q(device_id__icontains=search) | Q(user_id__icontains=search) | Q(
-                status__icontains=search))
-        return Response(subscriptions, status=status.HTTP_200_OK)
+            subscriptions = subscriptions.filter(
+                Q(device_id__device_name__icontains=search) | Q(user_id__username__icontains=search) | Q(
+                    status__icontains=search))
+        return Response(subscriptions.values(), status=status.HTTP_200_OK)
 
 
 def generate_hex_string(device_value):

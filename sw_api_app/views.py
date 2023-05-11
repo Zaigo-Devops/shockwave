@@ -7,7 +7,7 @@ from itertools import count
 import pytz
 import stripe
 from django.contrib.auth.models import User
-from django.db.models import Subquery, OuterRef, Max, Min
+from django.db.models import Subquery, OuterRef, Max, Min, Q
 from ecdsa import SigningKey, NIST256p
 
 from SHOCK_WAVE import settings
@@ -515,7 +515,7 @@ def session_list(request):
                     data = qs.values_list('highest_energy_level', flat=True)
                     if data:
                         sub_values['session'] = session.pk
-                        sub_values['timestamp'] = str(qs.order_by('-highest_energy_level').first().created_at)
+                        sub_values['timestamp'] = str(qs.order_by('created_at').first().created_at)
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         date_values.append(sub_values)
@@ -734,17 +734,19 @@ def payment_method_initialized(request):
                     stripe_Subscription_id = \
                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
                                             default_payment_method=stripe_payment_id)
-                        
+
                     if stripe_Subscription_id.status == "active":
-                        recuring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,stripe_Subscription_id.current_period_end)
+                        recuring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,
+                                                               stripe_Subscription_id.current_period_end)
                         start_date = recuring_period["start_date"]
                         end_date = recuring_period["end_date"]
                     else:
                         # Pay Latest Invoice of Subscription 
-                        invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice) # Invoice already not paid
+                        invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)  # Invoice already not paid
                         # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
                         # need to register the device in our table
-                        recuring_period = get_recuring_periods(invoice.lines.data[0].period.start,invoice.lines.data[0].period.end)
+                        recuring_period = get_recuring_periods(invoice.lines.data[0].period.start,
+                                                               invoice.lines.data[0].period.end)
                         start_date = recuring_period["start_date"]
                         end_date = recuring_period["end_date"]
 
@@ -1011,6 +1013,17 @@ def activate_device(request):
 #         encoded_string = binascii.hexlify(sig)
 #         return value_string, encoded_string
 #     return None
+
+
+@api_view(['GET'])
+def subscription_list(request):
+    if request.method == 'GET':
+        search = request.GET.get('search', None)
+        subscriptions = Subscription.objects.all().values()
+        if search:
+            subscriptions = subscriptions.filter(Q(device_id__icontains=search) | Q(user_id__icontains=search) | Q(
+                status__icontains=search))
+        return Response(subscriptions, status=status.HTTP_200_OK)
 
 
 def generate_hex_string(device_value):

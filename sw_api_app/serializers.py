@@ -24,11 +24,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
-    insurance_provider = serializers.CharField(source="user_profile.insurance_provider")
+    insurance_provider = serializers.CharField(source="user_profile.insurance_provider", read_only=True)
     is_promotion_email = serializers.BooleanField(source="user_profile.is_promotion_email", read_only=True)
-    user_address = serializers.CharField(source="user_profile.user_address")
-    user_phone_number = serializers.CharField(source="user_profile.user_phone_number")
-    user_profile_image = serializers.ImageField(source="user_profile.user_profile_image")
+    user_address = serializers.CharField(source="user_profile.user_address", read_only=True)
+    user_phone_number = serializers.CharField(source="user_profile.user_phone_number", read_only=True)
+    user_profile_image = serializers.ImageField(source="user_profile.user_profile_image", read_only=True)
 
     class Meta:
         model = User

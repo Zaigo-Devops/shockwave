@@ -685,18 +685,15 @@ def payment_method_creation(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def my_payment_method(request):
     if request.method == 'GET':
         try:
             user_id = get_member_id(request)
             payment_method_list = PaymentMethod.objects.filter(user_id=user_id)
-            payment_method_added = False
             payment_list = []
             for payment_method in payment_method_list:
-                payment = payment_method.subscription_set.count()
-                if payment > 0:
-                    payment_method_added = True
+                subscriptions = payment_method.subscription_set.filter(status=1)
+                payment_method_added = bool(subscriptions)
                 data_list = {
                     "is_subscribed_card": payment_method_added,
                     "id": payment_method.id,

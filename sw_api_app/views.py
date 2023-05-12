@@ -255,7 +255,6 @@ class OtpVerified(APIView):
                 return Response({'error': 'Email does not exists, please provide valid email'},
                                 status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         except Exception as e:
-            print(str(e))
             return Response({'error': 'Please provide valid email information', "msg": str(e)},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -508,6 +507,7 @@ def session_list(request):
                 to_date = from_date + timedelta(hours=23, minutes=59)
                 sessions = Session.objects.filter(device_id=device_id, user_id=user_id,
                                                   created_at__range=(from_date, to_date))
+                time_zone = get_local_time_zone(request)
                 values_list = []
                 for session in sessions:
                     sub_values = {}
@@ -515,11 +515,12 @@ def session_list(request):
                     data = qs.values_list('highest_energy_level', flat=True)
                     if data:
                         sub_values['session'] = session.pk
-                        sub_values['timestamp'] = str(qs.order_by('-highest_energy_level').first().created_at)
+                        date_time = qs.order_by('-highest_energy_level').first().created_at
+                        # sub_values['timestamp'] = str(qs.order_by('-highest_energy_level').first().created_at)
+                        sub_values['timestamp'] = convert_to_local_time(date_time, time_zone)
                         sub_values['session_environment'] = session.environment
                         sub_values['maximum_value'] = max(data)
                         date_values.append(sub_values)
-                        print('date_values', date_values)
                         # values_list.append(sub_values)
                 # date_values.append(values_list)
             return Response(date_values, status=status.HTTP_200_OK)
@@ -576,6 +577,7 @@ def device_session_data_history(request):
     end_date = request.data.get('end_date', None)
     limit = request.GET.get('per_page', 9)
     page_number = request.GET.get('page', 1)
+    time_zone = get_local_time_zone(request)
     current_url = f'{request.build_absolute_uri()}'
     extras = {
         "per_page": limit
@@ -596,6 +598,11 @@ def device_session_data_history(request):
         #     sub_device = sub_device.filter(session_id__id=session_id).order_by('created_at')
         if start_date and end_date:
             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
+        data_list = []
+        for sub_dev in sub_device:
+            data = {"created_at": convert_to_local_time(sub_dev.created_at, time_zone),
+                    "highest_energy_level": sub_dev.highest_energy_level}
+            data_list.append(data)
         session = Session.objects.filter(pk=session_id).first()
         if not session:
             return Response({"data": "Failure", "message": "Invalid Session ID Provided"}, status.HTTP_400_BAD_REQUEST)
@@ -605,12 +612,13 @@ def device_session_data_history(request):
         response = {
             "device_id": session.device_id.pk,
             "device_serial_no": session.device_id.device_serial_no,
-            "session_created_at": session.created_at,
+            "session_created_at": convert_to_local_time(session.created_at, time_zone),
             "location": session.location,
             "environment_type": session.environment,
             "session_maximum_value": session_max_min.get('max_value', 0.0),
             "session_minimum_value": session_max_min.get('min_value', 0.0),
-            "data": sub_device.values('created_at', 'highest_energy_level')
+            # "data": sub_device.values('created_at', 'highest_energy_level')
+            "data": data_list
         }
         return Response(response, status.HTTP_200_OK)
         # subscription = subscription_qs.first()
@@ -922,18 +930,32 @@ def get_session_detail_history_for_graph(request):
     return Response(highest_session_data, status.HTTP_200_OK)
 
 
-def utc_to_ist_timezone(session_datas):
+def utc_to_ist_timezone(session_datas, request):
     session_data_list = []
-    ist = pytz.timezone('Asia/Kolkata')
+    local_time_zone = get_local_time_zone(request)
     for session_data in session_datas:
         session_data_dict = {}
-        created_at_utc = session_data['created_at'].replace(tzinfo=pytz.utc)
-        created_at_ist = created_at_utc.astimezone(ist)
-        session_data['created_at'] = created_at_ist
+        created_at_utc = convert_to_local_time(session_data['created_at'], local_time_zone)
+        session_data['created_at'] = created_at_utc
         session_data_dict['created_at'] = session_data['created_at']
         session_data_dict['highest_energy_level'] = session_data['highest_energy_level']
         session_data_list.append(session_data_dict)
     return session_data_list
+
+
+def convert_to_local_time(datetime, timezone):
+    created_at_utc = datetime.replace(tzinfo=pytz.utc)
+    if timezone:
+        created_at_utc = created_at_utc.astimezone(timezone)
+    return created_at_utc
+
+
+def get_local_time_zone(request):
+    local_time_zone = None
+    for key, value in request.headers.items():
+        if key == "Tz" and value:
+            local_time_zone = pytz.timezone(value)
+    return local_time_zone
 
 
 @api_view(['POST'])
@@ -952,7 +974,7 @@ def cancel_payment_method(request):
                 payment_method.delete()
                 return Response({"message": "Payment details removed successfully"})
             else:
-                return Response({"message": "Oops!! This payment details is already subscribed"})
+                return Response({"message": "This payment details is already subscribed"})
         except Exception as e:
             return Response({'Error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

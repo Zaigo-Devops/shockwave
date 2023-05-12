@@ -690,8 +690,24 @@ def my_payment_method(request):
     if request.method == 'GET':
         try:
             user_id = get_member_id(request)
-            payment_method_list = PaymentMethod.objects.filter(user_id=user_id).values()
-            return Response(payment_method_list, status=status.HTTP_200_OK)
+            payment_method_list = PaymentMethod.objects.filter(user_id=user_id)
+            payment_method_added = False
+            payment_list = []
+            for payment_method in payment_method_list:
+                payment = payment_method.subscription_set.count()
+                if payment > 0:
+                    payment_method_added = True
+                data_list = {
+                    "is_subscribed_card": payment_method_added,
+                    "id": payment_method.id,
+                    "payment_id": payment_method.payment_id,
+                    "card_last4_no": payment_method.card_last4_no,
+                    "user_id": payment_method.user_id.id,
+                    "created_at": payment_method.created_at,
+                    "updated_at": payment_method.updated_at
+                }
+                payment_list.append(data_list)
+            return Response(payment_list, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

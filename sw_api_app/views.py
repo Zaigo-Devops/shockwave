@@ -922,7 +922,7 @@ def get_session_detail_history_for_graph(request):
             SessionData.objects.filter(device_id=active_device_id).order_by('created_at').values(
                 'created_at', 'highest_energy_level')[:10])
 
-        highest_session_data = utc_to_ist_timezone(session_datas)
+        highest_session_data = utc_to_ist_timezone(session_datas, request)
         highest_session_data.reverse()
 
     # session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')

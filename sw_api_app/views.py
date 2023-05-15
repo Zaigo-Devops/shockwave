@@ -174,7 +174,7 @@ class TriggerOtp(APIView):
         if email:
             try:
                 user = User.objects.get(email=email)
-                if user.email == email:
+                if user:
                     otp = generate_otp()
                     user_otp = UserOtp(user_id=user, otp=otp)
                     user_otp.save()
@@ -196,7 +196,7 @@ class OtpVerified(APIView):
         now = timezone.now()
         try:
             user = User.objects.filter(email=email).get()
-            if user.email == email:
+            if user:
                 user_otp = user.userotp_set.order_by('-created_at').first()
                 if user_otp.otp == otp:
                     if user_otp.created_at <= now <= user_otp.expired_at:

@@ -10,7 +10,7 @@ from sw_api_app.stripe import create_product, create_price, delete_subscription
 class DeviceAdmin(admin.ModelAdmin):
     model = Device
     fields = ('device_name', 'device_serial_no')
-    list_display = ('device_name', 'device_serial_no',)
+    list_display = ('device_name', 'device_serial_no', 'created_at', 'updated_at')
     actions_on_top = False
     actions_on_bottom = False
 
@@ -84,7 +84,13 @@ class SubscriptionAdmin(admin.ModelAdmin):
                 delete_subscription(subscription_id)
 
 
+class PaymentMethodAdmin(admin.ModelAdmin):
+    model = PaymentMethod
+    fields = ('payment_id', 'card_last4_no', 'user_id', 'created_at', 'updated_at')
+    list_display = ('payment_id', 'card_last4_no', 'user_id', 'created_at', 'updated_at')
+
+
 admin.site.register(Device, DeviceAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
-admin.site.register(PaymentMethod)
+admin.site.register(PaymentMethod, PaymentMethodAdmin)
 admin.site.register(DevicePrice, DevicePriceAdmin)

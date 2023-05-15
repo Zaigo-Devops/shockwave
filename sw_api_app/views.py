@@ -174,7 +174,7 @@ class TriggerOtp(APIView):
         if email:
             try:
                 user = User.objects.get(email=email)
-                if user:
+                if user.email == email:
                     otp = generate_otp()
                     user_otp = UserOtp(user_id=user, otp=otp)
                     user_otp.save()

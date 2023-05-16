@@ -544,6 +544,17 @@ def save_users(request):
             return Response('Please Provide Valid Credentials', status=status.HTTP_404_NOT_FOUND)
 
 
+@api_view(['POST'])
+def create_device_price_admin(request):
+    if request.method == 'POST':
+        try:
+            device_price = request.data['device_price']
+            DevicePrice.objects.create(price=device_price)
+            return Response('Device price created successfully', status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def previous_connected_list(request):

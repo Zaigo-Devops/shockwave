@@ -1,10 +1,8 @@
 from django.contrib import admin, messages
-from django.contrib.admin.actions import delete_selected
-from django.shortcuts import render
-from django.urls import reverse
+from django.contrib.auth.models import Group
 
 from sw_admin_app.models import Device, Subscription, PaymentMethod, DevicePrice
-from sw_api_app.stripe import create_product, create_price, delete_subscription
+from sw_api_app.stripe import delete_subscription
 
 
 class DeviceAdmin(admin.ModelAdmin):
@@ -38,7 +36,8 @@ class DeviceAdmin(admin.ModelAdmin):
 
 class DevicePriceAdmin(admin.ModelAdmin):
     model = DevicePrice
-    fields = ['price']
+
+    list_display = ('price', 'updated_at')
 
     def has_add_permission(self, request):
         return False
@@ -86,11 +85,24 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 class PaymentMethodAdmin(admin.ModelAdmin):
     model = PaymentMethod
-    fields = ('payment_id', 'card_last4_no', 'user_id', 'created_at', 'updated_at')
+    # fields = ('payment_id', 'card_last4_no', 'user_id', 'created_at', 'updated_at')
     list_display = ('payment_id', 'card_last4_no', 'user_id', 'created_at', 'updated_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 admin.site.register(Device, DeviceAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(PaymentMethod, PaymentMethodAdmin)
 admin.site.register(DevicePrice, DevicePriceAdmin)
+admin.site.unregister(Group)

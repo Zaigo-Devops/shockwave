@@ -500,12 +500,12 @@ def session_list(request):
             dates = list()
             for days in range(0, date_range.days + 1):
                 dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
-            device_id = Device.objects.filter(device_serial_no=device_serial_no).first().id
+            # device_id = Device.objects.filter(device_serial_no=device_serial_no).first().id
             date_values = []
             for date in dates:
                 from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
                 to_date = from_date + timedelta(hours=23, minutes=59)
-                sessions = Session.objects.filter(device_id=device_id, user_id=user_id,
+                sessions = Session.objects.filter(user_id=user_id,
                                                   created_at__range=(from_date, to_date))
                 time_zone = get_local_time_zone(request)
                 values_list = []

@@ -18,9 +18,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-admin.site.site_header = 'SHOCK WAVE ADMIN'
-admin.site.site_title = 'Shock Wave site'
-admin.site.index_title = 'Welcome to Shock Wave Portal'
+admin.site.site_url = '/admin'
+admin.site.site_header = 'SHOCK ALERT ADMIN'
+admin.site.site_title = 'Shock Alert site'
+admin.site.index_title = 'Welcome to Shock Alert Portal'
 
 urlpatterns = [
     path('admin/', admin.site.urls),

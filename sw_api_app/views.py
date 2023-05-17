@@ -832,69 +832,69 @@ def change_password(request):
         return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def export_session_data_history_as_pdf(request):
-    user_id = get_member_id(request)
-    device_serial_no = request.data.get('device_serial_no', None)
-    session_id = request.data.get('session_id', None)
-    start_date = request.data.get('start_date', None)
-    end_date = request.data.get('end_date', None)
-    export_data = request.data.get('export_data', None)
-    limit = request.GET.get('per_page', 9)
-    page_number = request.GET.get('page', 1)
-    current_url = f'{request.build_absolute_uri()}'
-    extras = {
-        "per_page": limit
-    }
-    if start_date and not end_date:
-        return Response("please provide End_date")
-    if not start_date and end_date:
-        return Response("please provide Start_date")
-    device_id_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
-    if device_id_list:
-        sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
-        if device_serial_no and session_id:
-            sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no,
-                                           session_id__id=session_id).order_by('created_at')
-        if start_date and end_date:
-            sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
-        response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
-        response['data'] = generate_user_cards(response['data'], True)
-        # if export_data:
-        # context = {'datas': response['data']}
-        # return render(request, 'email/export.html', context)
-        session_list = []
-        for data in response['data']:
-            session_data = {}
-            session_data.update({"device_id": data["device_serial_no"]})
-            session_data.update({"device_name": data["device_name"]})
-            session_data.update({"environment": data["environment"]})
-            session_data.update({"highest_energy_level": data["highest_energy_level"]})
-            session_data.update({"lowest_energy_level": data["lowest_energy_level"]})
-            session_data.update({"session_date": data["created_at"]})
-            session_list.append(session_data)
-        initial_session_data = sub_device.first()
-        if initial_session_data:
-            location = initial_session_data.session_id.location
-            device_name = initial_session_data.device_id.device_name
-            session_id = initial_session_data.session_id.pk
-            environment = initial_session_data.session_id.environment
-        else:
-            location = device_name = session_id = environment = "-"
-        context = {'datas': session_list,
-                   'location': location,
-                   'device_name': device_name,
-                   'session_id': session_id,
-                   'environment': environment}
-        html_string = render_to_string('email/export.html', context)
-        # Convert the HTML to a PDF and save it to a file
-        file_name = f'media/{session_id}_{timezone.now().strftime("%Y%m%d%s%f")}.pdf'
-        d = pdfkit.from_string(html_string, file_name)
-        # Send the PDF file as a response to the user
-        url = f'{settings.MY_DOMAIN}{file_name}'
-        return Response({"url": url}, status.HTTP_200_OK)
-    return Response({"data": "NO data"})
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def export_session_data_history_as_pdf(request):
+#     user_id = get_member_id(request)
+#     device_serial_no = request.data.get('device_serial_no', None)
+#     session_id = request.data.get('session_id', None)
+#     start_date = request.data.get('start_date', None)
+#     end_date = request.data.get('end_date', None)
+#     export_data = request.data.get('export_data', None)
+#     limit = request.GET.get('per_page', 9)
+#     page_number = request.GET.get('page', 1)
+#     current_url = f'{request.build_absolute_uri()}'
+#     extras = {
+#         "per_page": limit
+#     }
+#     if start_date and not end_date:
+#         return Response("please provide End_date")
+#     if not start_date and end_date:
+#         return Response("please provide Start_date")
+#     device_id_list = Subscription.objects.filter(user_id=user_id, status=1).values_list('device_id', flat=True)
+#     if device_id_list:
+#         sub_device = SessionData.objects.filter(user_id=user_id, device_id__in=device_id_list).order_by('created_at')
+#         if device_serial_no and session_id:
+#             sub_device = sub_device.filter(device_id__device_serial_no=device_serial_no,
+#                                            session_id__id=session_id).order_by('created_at')
+#         if start_date and end_date:
+#             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
+#         response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
+#         response['data'] = generate_user_cards(response['data'], True)
+#         # if export_data:
+#         # context = {'datas': response['data']}
+#         # return render(request, 'email/export.html', context)
+#         session_list = []
+#         for data in response['data']:
+#             session_data = {}
+#             session_data.update({"device_id": data["device_serial_no"]})
+#             session_data.update({"device_name": data["device_name"]})
+#             session_data.update({"environment": data["environment"]})
+#             session_data.update({"highest_energy_level": data["highest_energy_level"]})
+#             session_data.update({"lowest_energy_level": data["lowest_energy_level"]})
+#             session_data.update({"session_date": data["created_at"]})
+#             session_list.append(session_data)
+#         initial_session_data = sub_device.first()
+#         if initial_session_data:
+#             location = initial_session_data.session_id.location
+#             device_name = initial_session_data.device_id.device_name
+#             session_id = initial_session_data.session_id.pk
+#             environment = initial_session_data.session_id.environment
+#         else:
+#             location = device_name = session_id = environment = "-"
+#         context = {'datas': session_list,
+#                    'location': location,
+#                    'device_name': device_name,
+#                    'session_id': session_id,
+#                    'environment': environment}
+#         html_string = render_to_string('email/export.html', context)
+#         # Convert the HTML to a PDF and save it to a file
+#         file_name = f'media/{session_id}_{timezone.now().strftime("%Y%m%d%s%f")}.pdf'
+#         d = pdfkit.from_string(html_string, file_name)
+#         # Send the PDF file as a response to the user
+#         url = f'{settings.MY_DOMAIN}{file_name}'
+#         return Response({"url": url}, status.HTTP_200_OK)
+#     return Response({"data": "NO data"})
 
 
 @api_view(['GET'])
@@ -1102,3 +1102,59 @@ def generate_hex_string(device_value):
         print("error: " + error)
         data = None
     return data
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def export_session_data_history_as_pdf(request):
+    user_id = get_member_id(request)
+    device_serial_no = request.data.get('device_serial_no', None)
+    session_id = request.data.get('session_id', None)
+    start_date = request.data.get('start_date', None)
+    end_date = request.data.get('end_date', None)
+    if start_date and not end_date:
+        return Response("please provide End_date")
+    if not start_date and end_date:
+        return Response("please provide Start_date")
+    subscription_qs = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
+                                                  status=1)
+    subscription = subscription_qs.order_by('-created_at').first()
+    device_id_list = []
+    if subscription:
+        device_id_list = [subscription.device_id]
+    if subscription_qs.exists():
+        sub_device = SessionData.objects.filter(session_id__id=session_id).order_by('created_at')
+        if start_date and end_date:
+            sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
+        data_list = []
+        for data in sub_device:
+            session_data = {}
+            session_data.update({"device_id": data.device_id.device_serial_no})
+            session_data.update({"device_name": data.device_id.device_name})
+            session_data.update({"environment": data.session_id.environment})
+            session_data.update({"highest_energy_level": data.highest_energy_level})
+            session_data.update({"lowest_energy_level": data.lowest_energy_level})
+            session_data.update({"session_date": data.created_at})
+            data_list.append(session_data)
+
+        initial_session_data = sub_device.first()
+        if initial_session_data:
+            location = initial_session_data.session_id.location
+            device_name = initial_session_data.device_id.device_name
+            session_id = initial_session_data.session_id.pk
+            environment = initial_session_data.session_id.environment
+        else:
+            location = device_name = session_id = environment = "-"
+        context = {'datas': data_list,
+                   'location': location,
+                   'device_name': device_name,
+                   'session_id': session_id,
+                   'environment': environment}
+        html_string = render_to_string('email/export.html', context)
+        # Convert the HTML to a PDF and save it to a file
+        file_name = f'media/{session_id}_{timezone.now().strftime("%Y%m%d%s%f")}.pdf'
+        d = pdfkit.from_string(html_string, file_name)
+        # Send the PDF file as a response to the user
+        url = f'{settings.MY_DOMAIN}{file_name}'
+        return Response({"url": url}, status.HTTP_200_OK)
+    return Response({"data": "NO data"})

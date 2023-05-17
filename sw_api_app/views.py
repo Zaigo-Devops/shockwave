@@ -610,7 +610,6 @@ def device_session_data_history(request):
         if start_date and end_date:
             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
         session_data = get_session_data(sub_device, session_id, time_zone)
-        session_data['pdf_url'] = pdf_generate(sub_device, time_zone)
 
         return Response(session_data, status.HTTP_200_OK)
         # subscription = subscription_qs.first()
@@ -642,6 +641,7 @@ def get_session_data(sub_device, session_id, time_zone):
         "session_maximum_value": session_max_min.get('max_value', 0.0),
         "session_minimum_value": session_max_min.get('min_value', 0.0),
         # "data": sub_device.values('created_at', 'highest_energy_level')
+        "pdf_export_url": pdf_generate(sub_device, time_zone),
         "data": data_list
     }
     return response

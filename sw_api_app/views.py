@@ -609,35 +609,79 @@ def device_session_data_history(request):
         #     sub_device = sub_device.filter(session_id__id=session_id).order_by('created_at')
         if start_date and end_date:
             sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
-        data_list = []
-        for sub_dev in sub_device:
-            data = {"created_at": convert_to_local_time(sub_dev.created_at, time_zone),
-                    "highest_energy_level": sub_dev.highest_energy_level}
-            data_list.append(data)
-        session = Session.objects.filter(pk=session_id).first()
-        if not session:
-            return Response({"data": "Failure", "message": "Invalid Session ID Provided"}, status.HTTP_400_BAD_REQUEST)
-        session_max_min = SessionData.objects.filter(session_id=session).aggregate(
-            max_value=Max('highest_energy_level'),
-            min_value=Min('highest_energy_level'))
-        response = {
-            "device_id": session.device_id.pk,
-            "device_serial_no": session.device_id.device_serial_no,
-            "session_created_at": convert_to_local_time(session.created_at, time_zone),
-            "location": session.location,
-            "environment_type": session.environment,
-            "session_maximum_value": session_max_min.get('max_value', 0.0),
-            "session_minimum_value": session_max_min.get('min_value', 0.0),
-            # "data": sub_device.values('created_at', 'highest_energy_level')
-            "data": data_list
-        }
-        return Response(response, status.HTTP_200_OK)
+        session_data = get_session_data(sub_device, session_id, time_zone)
+        session_data['pdf_url'] = pdf_generate(sub_device, time_zone)
+
+        return Response(session_data, status.HTTP_200_OK)
         # subscription = subscription_qs.first()
 
         # response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
         # response['data'] = generate_user_cards(response['data'], True)
         # return Response(response, status=status.HTTP_200_OK)
     return Response({"data": "No Data", "message": "No Subscribed device against the user"})
+
+
+def get_session_data(sub_device, session_id, time_zone):
+    data_list = []
+    for sub_dev in sub_device:
+        data = {"created_at": convert_to_local_time(sub_dev.created_at, time_zone),
+                "highest_energy_level": sub_dev.highest_energy_level}
+        data_list.append(data)
+    session = Session.objects.filter(pk=session_id).first()
+    if not session:
+        return Response({"data": "Failure", "message": "Invalid Session ID Provided"}, status.HTTP_400_BAD_REQUEST)
+    session_max_min = SessionData.objects.filter(session_id=session).aggregate(
+        max_value=Max('highest_energy_level'),
+        min_value=Min('highest_energy_level'))
+    response = {
+        "device_id": session.device_id.pk,
+        "device_serial_no": session.device_id.device_serial_no,
+        "session_created_at": convert_to_local_time(session.created_at, time_zone),
+        "location": session.location,
+        "environment_type": session.environment,
+        "session_maximum_value": session_max_min.get('max_value', 0.0),
+        "session_minimum_value": session_max_min.get('min_value', 0.0),
+        # "data": sub_device.values('created_at', 'highest_energy_level')
+        "data": data_list
+    }
+    return response
+
+
+def pdf_generate(sub_device, time_zone):
+    try:
+        data_list = []
+        for data in sub_device:
+            session_data = {}
+            session_data.update({"device_id": data.device_id.device_serial_no})
+            session_data.update({"device_name": data.device_id.device_name})
+            session_data.update({"environment": data.session_id.environment})
+            session_data.update({"highest_energy_level": data.highest_energy_level})
+            session_data.update({"lowest_energy_level": data.lowest_energy_level})
+            session_data.update({"session_date": convert_to_local_time(data.created_at, time_zone)})
+            data_list.append(session_data)
+
+        initial_session_data = sub_device.first()
+        if initial_session_data:
+            location = initial_session_data.session_id.location
+            device_name = initial_session_data.device_id.device_name
+            session_id = initial_session_data.session_id.pk
+            environment = initial_session_data.session_id.environment
+        else:
+            location = device_name = session_id = environment = "-"
+        context = {'datas': data_list,
+                   'location': location,
+                   'device_name': device_name,
+                   'session_id': session_id,
+                   'environment': environment}
+        html_string = render_to_string('email/export.html', context)
+        # Convert the HTML to a PDF and save it to a file
+        file_name = f'media/{session_id}_{timezone.now().strftime("%Y%m%d%s%f")}.pdf'
+        d = pdfkit.from_string(html_string, file_name)
+        # Send the PDF file as a response to the user
+        url = f'{settings.MY_DOMAIN}{file_name}'
+    except:
+        url = None
+    return url
 
 
 @api_view(['POST'])
@@ -1102,59 +1146,3 @@ def generate_hex_string(device_value):
         print("error: " + error)
         data = None
     return data
-
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def export_session_data_history_as_pdf(request):
-    user_id = get_member_id(request)
-    device_serial_no = request.data.get('device_serial_no', None)
-    session_id = request.data.get('session_id', None)
-    start_date = request.data.get('start_date', None)
-    end_date = request.data.get('end_date', None)
-    if start_date and not end_date:
-        return Response("please provide End_date")
-    if not start_date and end_date:
-        return Response("please provide Start_date")
-    subscription_qs = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
-                                                  status=1)
-    subscription = subscription_qs.order_by('-created_at').first()
-    device_id_list = []
-    if subscription:
-        device_id_list = [subscription.device_id]
-    if subscription_qs.exists():
-        sub_device = SessionData.objects.filter(session_id__id=session_id).order_by('created_at')
-        if start_date and end_date:
-            sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
-        data_list = []
-        for data in sub_device:
-            session_data = {}
-            session_data.update({"device_id": data.device_id.device_serial_no})
-            session_data.update({"device_name": data.device_id.device_name})
-            session_data.update({"environment": data.session_id.environment})
-            session_data.update({"highest_energy_level": data.highest_energy_level})
-            session_data.update({"lowest_energy_level": data.lowest_energy_level})
-            session_data.update({"session_date": data.created_at})
-            data_list.append(session_data)
-
-        initial_session_data = sub_device.first()
-        if initial_session_data:
-            location = initial_session_data.session_id.location
-            device_name = initial_session_data.device_id.device_name
-            session_id = initial_session_data.session_id.pk
-            environment = initial_session_data.session_id.environment
-        else:
-            location = device_name = session_id = environment = "-"
-        context = {'datas': data_list,
-                   'location': location,
-                   'device_name': device_name,
-                   'session_id': session_id,
-                   'environment': environment}
-        html_string = render_to_string('email/export.html', context)
-        # Convert the HTML to a PDF and save it to a file
-        file_name = f'media/{session_id}_{timezone.now().strftime("%Y%m%d%s%f")}.pdf'
-        d = pdfkit.from_string(html_string, file_name)
-        # Send the PDF file as a response to the user
-        url = f'{settings.MY_DOMAIN}{file_name}'
-        return Response({"url": url}, status.HTTP_200_OK)
-    return Response({"data": "NO data"})

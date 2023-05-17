@@ -158,11 +158,14 @@ def is_device_registration(request):
             user_id = get_member_id(request)
             subscription = Subscription.objects.filter(user_id=user_id,
                                                        device_id__device_serial_no=device_serial_no, status=1).first()
+            device_price = DevicePrice.objects.get()
             if subscription:
                 if subscription.status == 1:
-                    return Response({"is_subscribed": True}, status=status.HTTP_200_OK)
+                    return Response({"is_subscribed": True,
+                                     "device_price": device_price.price}, status=status.HTTP_200_OK)
             else:
-                return Response({"is_subscribed": False}, status=status.HTTP_200_OK)
+                return Response({"is_subscribed": False,
+                                 "device_price": device_price.price}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"is_subscribed": False, "message": "From Exception", "error": "From Exception"},
                             status=status.HTTP_200_OK)
@@ -1146,12 +1149,3 @@ def generate_hex_string(device_value):
         print("error: " + error)
         data = None
     return data
-
-
-@api_view(['GET'])
-def latest_device_price(request):
-    try:
-        device_price = DevicePrice.objects.get()
-        return Response({"device_price": device_price.price}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"error": str(e)})

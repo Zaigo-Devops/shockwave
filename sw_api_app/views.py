@@ -1146,3 +1146,12 @@ def generate_hex_string(device_value):
         print("error: " + error)
         data = None
     return data
+
+
+@api_view(['GET'])
+def latest_device_price(request):
+    try:
+        device_price = DevicePrice.objects.get()
+        return Response({"device_price": device_price.price}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)})

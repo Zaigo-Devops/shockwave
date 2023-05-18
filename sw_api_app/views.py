@@ -1161,13 +1161,14 @@ def session_list(request):
             device_serial_no = request.data.get('device_serial_no', None)
             start_date = request.data.get('start_date', None)
             end_date = request.data.get('end_date', None)
+            environment = request.data.get('environment', None)
 
             if start_date and not end_date:
                 return Response("please provide End_date")
             if not start_date and end_date:
                 return Response("please provide Start_date")
             if start_date and end_date and device_serial_no:
-                date_range(request, start_date, end_date, user_id, device_serial_no, date_values)
+                date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
             else:
                 session = Session.objects.filter(user_id=user_id, sessiondata__isnull=False).order_by(
                     '-created_at').first()
@@ -1175,14 +1176,14 @@ def session_list(request):
                     device_serial_no = session.device_id.device_serial_no
                     end_date = session.created_at.date().isoformat()
                     start_date = (session.created_at - timedelta(days=7)).date().isoformat()
-                    date_range(request, start_date, end_date, user_id, device_serial_no, date_values)
+                    date_range(request, start_date, end_date, user_id, device_serial_no, date_values,environment)
 
             return Response(date_values, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-def date_range(request, start_date, end_date, user_id, device_serial_no, date_values):
+def date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment=None):
     from_date_time_obj = timezone.datetime.strptime(start_date, "%Y-%m-%d")
     end_date_time_obj = timezone.datetime.strptime(end_date, "%Y-%m-%d")
     date_range = end_date_time_obj - from_date_time_obj
@@ -1194,6 +1195,9 @@ def date_range(request, start_date, end_date, user_id, device_serial_no, date_va
         to_date = from_date + timedelta(hours=23, minutes=59)
         sessions = Session.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
                                           created_at__range=(from_date, to_date))
+        if environment:
+            sessions = sessions.filter(environment=environment)
+
         time_zone = get_local_time_zone(request)
         session_data_retrieve(sessions, date_values, time_zone)
     return date_values

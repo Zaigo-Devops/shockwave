@@ -944,61 +944,61 @@ def change_password(request):
 #     return Response({"data": "NO data"})
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_session_detail_history_for_graph(request):
-    device_serial_no = request.data.get('device_serial_no')
-    member_id = get_member_id(request)
-    if not device_serial_no:
-        return Response({"status": "failure", "error": "Device Serial Number is required"}, status.HTTP_400_BAD_REQUEST)
-
-    # devices = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').values_list('pk',
-    #                                                                                                        flat=True)
-
-    subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=member_id,
-                                               status=1).order_by(
-        '-created_at').first()
-
-    if not subscription:
-        return Response({"status": "failure", "error": "Subscription is invalid or not exists"},
-                        status.HTTP_400_BAD_REQUEST)
-
-    active_device_id = subscription.device_id
-
-    # if session_id:
-
-    session_id = request.data.get('session_id', None)
-
-    if session_id:
-        params = {
-            "device_id": active_device_id,
-            "session_id": session_id
-        }
-    else:
-        params = {
-            "device_id": active_device_id
-        }
-    if active_device_id.session_set.count() > 1:
-
-        get_max_highest_energy_level_query = SessionData.objects.filter(session_id=OuterRef('session_id'),
-                                                                        device_id=OuterRef('device_id')).order_by(
-            'created_at').values('id')
-        session_datas = SessionData.objects.filter(**params).filter(
-            id=Subquery(get_max_highest_energy_level_query[:1])).values(
-            'created_at', 'highest_energy_level')
-
-        highest_session_data = utc_to_ist_timezone(session_datas)
-    else:
-        session_datas = list(
-            SessionData.objects.filter(device_id=active_device_id).order_by('created_at').values(
-                'created_at', 'highest_energy_level')[:10])
-
-        highest_session_data = utc_to_ist_timezone(session_datas, request)
-        highest_session_data.reverse()
-
-    # session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
-
-    return Response(highest_session_data, status.HTTP_200_OK)
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_session_detail_history_for_graph(request):
+#     device_serial_no = request.data.get('device_serial_no')
+#     member_id = get_member_id(request)
+#     # if not device_serial_no:
+#     #     return Response({"status": "failure", "error": "Device Serial Number is required"}, status.HTTP_400_BAD_REQUEST)
+#
+#     # devices = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').values_list('pk',
+#     #                                                                                                        flat=True)
+#
+#     subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=member_id,
+#                                                status=1).order_by(
+#         '-created_at').first()
+#
+#     if not subscription:
+#         return Response({"status": "failure", "error": "Subscription is invalid or not exists"},
+#                         status.HTTP_400_BAD_REQUEST)
+#
+#     active_device_id = subscription.device_id
+#
+#     # if session_id:
+#
+#     session_id = request.data.get('session_id', None)
+#
+#     if session_id:
+#         params = {
+#             "device_id": active_device_id,
+#             "session_id": session_id
+#         }
+#     else:
+#         params = {
+#             "device_id": active_device_id
+#         }
+#     if active_device_id.session_set.count() > 1:
+#
+#         get_max_highest_energy_level_query = SessionData.objects.filter(session_id=OuterRef('session_id'),
+#                                                                         device_id=OuterRef('device_id')).order_by(
+#             'created_at').values('id')
+#         session_datas = SessionData.objects.filter(**params).filter(
+#             id=Subquery(get_max_highest_energy_level_query[:1])).values(
+#             'created_at', 'highest_energy_level')
+#
+#         highest_session_data = utc_to_ist_timezone(session_datas)
+#     else:
+#         session_datas = list(
+#             SessionData.objects.filter(device_id=active_device_id).order_by('created_at').values(
+#                 'created_at', 'highest_energy_level')[:10])
+#
+#         highest_session_data = utc_to_ist_timezone(session_datas, request)
+#         highest_session_data.reverse()
+#
+#     # session_data = SessionData.objects.filter(**params).values('created_at', 'highest_energy_level')
+#
+#     return Response(highest_session_data, status.HTTP_200_OK)
 
 
 def utc_to_ist_timezone(session_datas, request):
@@ -1176,7 +1176,7 @@ def session_list(request):
                     device_serial_no = session.device_id.device_serial_no
                     end_date = session.created_at.date().isoformat()
                     start_date = (session.created_at - timedelta(days=7)).date().isoformat()
-                    date_range(request, start_date, end_date, user_id, device_serial_no, date_values,environment)
+                    date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
 
             return Response(date_values, status=status.HTTP_200_OK)
         except Exception as e:
@@ -1203,7 +1203,7 @@ def date_range(request, start_date, end_date, user_id, device_serial_no, date_va
     return date_values
 
 
-def session_data_retrieve(sessions, date_values, time_zone, ):
+def session_data_retrieve(sessions, date_values, time_zone):
     data = None
     for session in sessions:
         sub_values = {}
@@ -1217,4 +1217,65 @@ def session_data_retrieve(sessions, date_values, time_zone, ):
             sub_values['session_environment'] = session.environment
             sub_values['maximum_value'] = max(data)
             date_values.append(sub_values)
+    return date_values
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def get_session_detail_history_for_graph(request):
+    if request.method == 'POST':
+        try:
+            date_values = []
+            user_id = get_member_id(request)
+            device_serial_no = request.data.get('device_serial_no', None)
+            start_date = request.data.get('start_date', None)
+            end_date = request.data.get('end_date', None)
+            environment = request.data.get('environment', None)
+
+            if start_date and not end_date:
+                return Response("please provide End_date")
+            if not start_date and end_date:
+                return Response("please provide Start_date")
+            if start_date and end_date and device_serial_no:
+                date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+            else:
+                session = Session.objects.filter(user_id=user_id, sessiondata__isnull=False).order_by(
+                    '-created_at').first()
+                if session:
+                    device_serial_no = session.device_id.device_serial_no
+                    end_date = session.created_at.date().isoformat()
+                    start_date = (session.created_at - timedelta(days=7)).date().isoformat()
+                    date_range_graph(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+
+            return Response(date_values, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def date_range_graph(request, start_date, end_date, user_id, device_serial_no, date_values, environment):
+    from_date_time_obj = timezone.datetime.strptime(start_date, "%Y-%m-%d")
+    end_date_time_obj = timezone.datetime.strptime(end_date, "%Y-%m-%d")
+    date_range = end_date_time_obj - from_date_time_obj
+    dates = list()
+    for days in range(0, date_range.days + 1):
+        dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
+    for date in dates:
+        from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
+        to_date = from_date + timedelta(hours=23, minutes=59)
+        sessions = Session.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
+                                          created_at__range=(from_date, to_date))
+        if environment:
+            sessions = sessions.filter(environment=environment)
+
+        time_zone = get_local_time_zone(request)
+        for session in sessions:
+            sub_values = {}
+            qs = SessionData.objects.filter(session_id=session)
+            data = qs.values_list('highest_energy_level', flat=True)
+            if data:
+                date_time = qs.order_by('-highest_energy_level').first().created_at
+                sub_values['created_at'] = convert_to_local_time(date_time, time_zone)
+                sub_values['highest_energy_level'] = max(data)
+                date_values.append(sub_values)
+
     return date_values

@@ -482,53 +482,53 @@ def session_data_save(request, session_id):
 #             {'device': device_id, 'date': f"{start_date} to {end_date}", 'no_of_section': len(sessions),
 #              'environment_type': environment_type})
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def session_list(request):
-    if request.method == 'POST':
-        try:
-            user_id = get_member_id(request)
-            device_serial_no = request.data.get('device_serial_no', None)
-            if not device_serial_no:
-                return Response({"status": "failure", "error": "Device Serial Number is required."})
-            start_date = request.data.get('start_date', None)
-            end_date = request.data.get('end_date', None)
-            if start_date and not end_date:
-                return Response("please provide End_date")
-            if not start_date and end_date:
-                return Response("please provide Start_date")
-            from_date_time_obj = timezone.datetime.strptime(start_date, "%Y-%m-%d")
-            end_date_time_obj = timezone.datetime.strptime(end_date, "%Y-%m-%d")
-            date_range = end_date_time_obj - from_date_time_obj
-            dates = list()
-            for days in range(0, date_range.days + 1):
-                dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
-            # device_id = Device.objects.filter(device_serial_no=device_serial_no).first().id
-            date_values = []
-            for date in dates:
-                from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
-                to_date = from_date + timedelta(hours=23, minutes=59)
-                sessions = Session.objects.filter(user_id=user_id,
-                                                  created_at__range=(from_date, to_date))
-                time_zone = get_local_time_zone(request)
-                values_list = []
-                for session in sessions:
-                    sub_values = {}
-                    qs = SessionData.objects.filter(session_id=session)
-                    data = qs.values_list('highest_energy_level', flat=True)
-                    if data:
-                        sub_values['session'] = session.pk
-                        date_time = qs.order_by('-highest_energy_level').first().created_at
-                        # sub_values['timestamp'] = str(qs.order_by('-highest_energy_level').first().created_at)
-                        sub_values['timestamp'] = convert_to_local_time(date_time, time_zone)
-                        sub_values['session_environment'] = session.environment
-                        sub_values['maximum_value'] = max(data)
-                        date_values.append(sub_values)
-                        # values_list.append(sub_values)
-                # date_values.append(values_list)
-            return Response(date_values, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def session_list(request):
+#     if request.method == 'POST':
+#         try:
+#             user_id = get_member_id(request)
+#             device_serial_no = request.data.get('device_serial_no', None)
+#             if not device_serial_no:
+#                 return Response({"status": "failure", "error": "Device Serial Number is required."})
+#             start_date = request.data.get('start_date', None)
+#             end_date = request.data.get('end_date', None)
+#             if start_date and not end_date:
+#                 return Response("please provide End_date")
+#             if not start_date and end_date:
+#                 return Response("please provide Start_date")
+#             from_date_time_obj = timezone.datetime.strptime(start_date, "%Y-%m-%d")
+#             end_date_time_obj = timezone.datetime.strptime(end_date, "%Y-%m-%d")
+#             date_range = end_date_time_obj - from_date_time_obj
+#             dates = list()
+#             for days in range(0, date_range.days + 1):
+#                 dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
+#             # device_id = Device.objects.filter(device_serial_no=device_serial_no).first().id
+#             date_values = []
+#             for date in dates:
+#                 from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
+#                 to_date = from_date + timedelta(hours=23, minutes=59)
+#                 sessions = Session.objects.filter(user_id=user_id,
+#                                                   created_at__range=(from_date, to_date))
+#                 time_zone = get_local_time_zone(request)
+#                 values_list = []
+#                 for session in sessions:
+#                     sub_values = {}
+#                     qs = SessionData.objects.filter(session_id=session)
+#                     data = qs.values_list('highest_energy_level', flat=True)
+#                     if data:
+#                         sub_values['session'] = session.pk
+#                         date_time = qs.order_by('-highest_energy_level').first().created_at
+#                         # sub_values['timestamp'] = str(qs.order_by('-highest_energy_level').first().created_at)
+#                         sub_values['timestamp'] = convert_to_local_time(date_time, time_zone)
+#                         sub_values['session_environment'] = session.environment
+#                         sub_values['maximum_value'] = max(data)
+#                         date_values.append(sub_values)
+#                         # values_list.append(sub_values)
+#                 # date_values.append(values_list)
+#             return Response(date_values, status=status.HTTP_200_OK)
+#         except Exception as e:
+#             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

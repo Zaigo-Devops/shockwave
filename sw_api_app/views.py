@@ -1169,9 +1169,13 @@ def session_list(request):
                 return Response("please provide Start_date")
             if start_date and end_date and device_serial_no:
                 date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+            elif start_date and end_date:
+                session = session_fn(user_id)
+                if session:
+                    device_serial_no = session.device_id.device_serial_no
+                    date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
             else:
-                session = Session.objects.filter(user_id=user_id, sessiondata__isnull=False).order_by(
-                    '-created_at').first()
+                session = session_fn(user_id)
                 if session:
                     device_serial_no = session.device_id.device_serial_no
                     end_date = session.created_at.date().isoformat()
@@ -1181,6 +1185,12 @@ def session_list(request):
             return Response(date_values, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def session_fn(user_id):
+    session = Session.objects.filter(user_id=user_id, sessiondata__isnull=False).order_by(
+        '-created_at').first()
+    return session
 
 
 def date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment=None):
@@ -1237,10 +1247,14 @@ def get_session_detail_history_for_graph(request):
             if not start_date and end_date:
                 return Response("please provide Start_date")
             if start_date and end_date and device_serial_no:
-                date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+                date_range_graph(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+            elif start_date and end_date:
+                session = session_fn(user_id)
+                if session:
+                    device_serial_no = session.device_id.device_serial_no
+                    date_range_graph(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
             else:
-                session = Session.objects.filter(user_id=user_id, sessiondata__isnull=False).order_by(
-                    '-created_at').first()
+                session = session_fn(user_id)
                 if session:
                     device_serial_no = session.device_id.device_serial_no
                     end_date = session.created_at.date().isoformat()

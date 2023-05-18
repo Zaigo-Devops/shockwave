@@ -1034,7 +1034,7 @@ def cancel_payment_method(request):
             payment_method_id = request.data.get('payment_method_id')
             user_id = get_member_id(request)
             subscribed = Subscription.objects.filter(user_id=user_id,
-                                                     payment_method_id__pk=payment_method_id).exists()
+                                                     payment_method_id__pk=payment_method_id, status=1).exists()
             if not subscribed:
                 payment_method = PaymentMethod.objects.filter(pk=payment_method_id).first()
                 stripe_payment_id = payment_method.payment_id

@@ -159,7 +159,7 @@ def is_device_registration(request):
             subscription = Subscription.objects.filter(user_id=user_id,
                                                        device_id__device_serial_no=device_serial_no, status=1).first()
             device_price = DevicePrice.objects.get()
-            duration = None
+            duration = '30'
             if subscription:
                 if subscription.status == 1:
                     start_date = subscription.start_date

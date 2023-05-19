@@ -164,7 +164,7 @@ def is_device_registration(request):
                 if subscription.status == 1:
                     start_date = subscription.start_date
                     end_date = subscription.end_date
-                    duration = end_date-start_date
+                    duration = end_date - start_date
                     return Response({"is_subscribed": True,
                                      "device_price": device_price.price,
                                      "duration": duration.days}, status=status.HTTP_200_OK)
@@ -564,6 +564,9 @@ def create_device_price_admin(request):
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+from datetime import datetime
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def previous_connected_list(request):
@@ -573,6 +576,10 @@ def previous_connected_list(request):
             subscriptions = Subscription.objects.filter(user_id=user_id, status=1)
             final_list = []
             for subscription in subscriptions:
+                # This to show the remain days for subscription period to end.
+                end_date = datetime.fromisoformat(str(subscription.end_date))
+                current_date = datetime.now()
+                remaining_days = (end_date.date() - current_date.date()).days
                 registered_list = {'subscription_id': subscription.id,
                                    'subscription_stripe_payment_id': subscription.stripe_payment_id,
                                    'subscription_stripe_customer_id': subscription.stripe_customer_id,
@@ -580,7 +587,8 @@ def previous_connected_list(request):
                                    'device_serial_no': subscription.device_id.device_serial_no,
                                    'is_subscription_active': subscription.status,
                                    'subscription_start_date': subscription.start_date,
-                                   'subscription_end_date': subscription.end_date}
+                                   'subscription_end_date': subscription.end_date,
+                                   'duration': remaining_days}
                 final_list.append(registered_list)
             return Response(final_list, status=status.HTTP_200_OK)
         except Exception as e:
@@ -590,43 +598,42 @@ def previous_connected_list(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def device_session_data_history(request):
+    # try:
     user_id = get_member_id(request)
-    device_serial_no = request.data.get('device_serial_no', None)
+    # device_serial_no = request.data.get('device_serial_no', None)
     session_id = request.data.get('session_id', None)
+    if not session_id:
+        return Response({"error": "please provide session_id"}, status=status.HTTP_400_BAD_REQUEST)
     start_date = request.data.get('start_date', None)
     end_date = request.data.get('end_date', None)
-    limit = request.GET.get('per_page', 9)
-    page_number = request.GET.get('page', 1)
+    # limit = request.GET.get('per_page', 9)
+    # page_number = request.GET.get('page', 1)
     time_zone = get_local_time_zone(request)
-    current_url = f'{request.build_absolute_uri()}'
-    extras = {
-        "per_page": limit
-    }
+    # current_url = f'{request.build_absolute_uri()}'
+    # extras = {
+    #     "per_page": limit
+    # }
     if start_date and not end_date:
         return Response("please provide End_date")
     if not start_date and end_date:
         return Response("please provide Start_date")
-    subscription_qs = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
-                                                  status=1)
-    subscription = subscription_qs.order_by('-created_at').first()
-    device_id_list = []
-    if subscription:
-        device_id_list = [subscription.device_id]
-    if subscription_qs.exists():
-        sub_device = SessionData.objects.filter(session_id__id=session_id).order_by('created_at')
-        # if session_id:
-        #     sub_device = sub_device.filter(session_id__id=session_id).order_by('created_at')
-        if start_date and end_date:
-            sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
-        session_data = get_session_data(sub_device, session_id, time_zone)
+    # subscription_qs = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
+    #                                               status=1)
+    # subscription = subscription_qs.order_by('-created_at').first()
+    # device_id_list = []
+    # if subscription:
+    #     device_id_list = [subscription.device_id]
+    # if subscription_qs.exists():
+    sub_device = SessionData.objects.filter(session_id__id=session_id).order_by('created_at')
+    if start_date and end_date:
+        sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
+    session_data = get_session_data(sub_device, session_id, time_zone)
 
-        return Response(session_data, status.HTTP_200_OK)
-        # subscription = subscription_qs.first()
+    return Response(session_data, status.HTTP_200_OK)
 
-        # response = get_paginated_response(sub_device, current_url, page_number, limit, extras)
-        # response['data'] = generate_user_cards(response['data'], True)
-        # return Response(response, status=status.HTTP_200_OK)
-    return Response({"data": "No Data", "message": "No Subscribed device against the user"})
+
+# except Exception as e:
+#     return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def get_session_data(sub_device, session_id, time_zone):

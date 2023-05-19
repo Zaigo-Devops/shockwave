@@ -159,13 +159,19 @@ def is_device_registration(request):
             subscription = Subscription.objects.filter(user_id=user_id,
                                                        device_id__device_serial_no=device_serial_no, status=1).first()
             device_price = DevicePrice.objects.get()
+            duration = None
             if subscription:
                 if subscription.status == 1:
+                    start_date = subscription.start_date
+                    end_date = subscription.end_date
+                    duration = end_date-start_date
                     return Response({"is_subscribed": True,
-                                     "device_price": device_price.price}, status=status.HTTP_200_OK)
+                                     "device_price": device_price.price,
+                                     "duration": duration.days}, status=status.HTTP_200_OK)
             else:
                 return Response({"is_subscribed": False,
-                                 "device_price": device_price.price}, status=status.HTTP_200_OK)
+                                 "device_price": device_price.price,
+                                 "duration": duration}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"is_subscribed": False, "message": "From Exception", "error": "From Exception"},
                             status=status.HTTP_200_OK)

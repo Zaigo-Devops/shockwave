@@ -3,6 +3,8 @@ import datetime
 import hashlib
 from datetime import timedelta
 from itertools import count
+from datetime import datetime
+
 
 import pytz
 import stripe
@@ -562,9 +564,6 @@ def create_device_price_admin(request):
             return Response('Device price created successfully', status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-from datetime import datetime
 
 
 @api_view(['GET'])
@@ -1168,7 +1167,7 @@ def generate_hex_string(device_value):
 @permission_classes([IsAuthenticated])
 def session_list(request):
     if request.method == 'POST':
-        try:
+        # try:
             date_values = []
             user_id = get_member_id(request)
             device_serial_no = request.data.get('device_serial_no', None)
@@ -1210,8 +1209,8 @@ def session_list(request):
                     date_range(start_date, end_date, user_id, device_serial_no, date_values, time_zone, environment)
 
             return Response(date_values, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        # except Exception as e:
+        #     return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def session_fn(user_id):
@@ -1226,7 +1225,7 @@ def date_range(start_date, end_date, user_id, device_serial_no, date_values, tim
     date_range = end_date_time_obj - from_date_time_obj
     dates = list()
     for days in range(0, date_range.days + 1):
-        dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
+        dates.append((from_date_time_obj + timedelta(days)).strftime('%Y-%m-%d'))
     for date in dates:
         from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
         to_date = from_date + timedelta(hours=23, minutes=59)
@@ -1312,7 +1311,7 @@ def date_range_graph(start_date, end_date, user_id, device_serial_no, date_value
     date_range = end_date_time_obj - from_date_time_obj
     dates = list()
     for days in range(0, date_range.days + 1):
-        dates.append((from_date_time_obj + datetime.timedelta(days)).strftime('%Y-%m-%d'))
+        dates.append((from_date_time_obj + timedelta(days)).strftime('%Y-%m-%d'))
     for date in dates:
         from_date = timezone.datetime.strptime(date, "%Y-%m-%d")
         to_date = from_date + timedelta(hours=23, minutes=59)

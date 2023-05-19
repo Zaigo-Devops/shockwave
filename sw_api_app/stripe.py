@@ -6,7 +6,7 @@ from SHOCK_WAVE.settings import STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SIGNING_SECRET
 from django.views.decorators.csrf import csrf_exempt
 
 from sw_admin_app.models import Subscription, SubscriptionPeriod
-from sw_api_app.utils import ACTIVE, unix_timestamp_format
+from sw_api_app.utils import ACTIVE, INACTIVE, unix_timestamp_format
 from rest_framework import status
 stripe.api_key = STRIPE_SECRET_KEY
 
@@ -32,7 +32,7 @@ def stripe_webhook(request):
         payment_intent = event.data.object  # contains a stripe.PaymentIntent
         print('PaymentIntent was successful!')
 
-    elif event.type == 'invoice.paid':
+    if event.type == 'invoice.paid':
         payment_intent = event.data.object
         stripe_Subscription_id = payment_intent.subscription
         stripe_customer_id = payment_intent.customer
@@ -54,9 +54,20 @@ def stripe_webhook(request):
                                               stripe_subscription_id=stripe_Subscription_id,
                                               stripe_customer_id=stripe_customer_id, start_date=start_date,
                                               end_date=end_date)
+            
+    if  event.type == 'invoice.payment_failed':
+        payment_intent = event.data.object
+        stripe_subscription_id = payment_intent.subscription
+        stripe_customer_id = payment_intent.customer
+        
+        subscription = Subscription.objects.filter(stripe_subscription_id=stripe_subscription_id,
+                                                stripe_customer_id=stripe_customer_id).first()
+        if subscription:
+            subscription.status = INACTIVE
+            subscription.save()
     else:
         print('Unhandled event type {}'.format(event.type))
-    return Response(status=status.HTTP_200_OK)
+    return Response(event,status=status.HTTP_200_OK)
 
 
 def create_payment_customer(name, email, payment_method=None, phone=None):

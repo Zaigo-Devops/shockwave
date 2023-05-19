@@ -1162,25 +1162,39 @@ def session_list(request):
             start_date = request.data.get('start_date', None)
             end_date = request.data.get('end_date', None)
             environment = request.data.get('environment', None)
+            time_zone = get_local_time_zone(request)
 
             if start_date and not end_date:
                 return Response("please provide End_date")
             if not start_date and end_date:
                 return Response("please provide Start_date")
             if start_date and end_date and device_serial_no:
-                date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+                date_range(start_date, end_date, user_id, device_serial_no, date_values, time_zone, environment)
             elif start_date and end_date:
                 session = session_fn(user_id)
                 if session:
                     device_serial_no = session.device_id.device_serial_no
-                    date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+                    date_range(start_date, end_date, user_id, device_serial_no, date_values, time_zone, environment)
+            elif environment and device_serial_no:
+                sessions = Session.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
+                                                  environment=environment)
+                session_data_retrieve(sessions, date_values, time_zone)
+            elif environment or device_serial_no:
+                sessions = Session.objects.filter(user_id=user_id)
+                if environment:
+                    sessions = sessions.filter(environment=environment)
+                if device_serial_no:
+                    sessions = sessions.filter(device_id__device_serial_no=device_serial_no)
+
+                session_data_retrieve(sessions, date_values, time_zone)
+
             else:
                 session = session_fn(user_id)
                 if session:
                     device_serial_no = session.device_id.device_serial_no
                     end_date = session.created_at.date().isoformat()
                     start_date = (session.created_at - timedelta(days=7)).date().isoformat()
-                    date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+                    date_range(start_date, end_date, user_id, device_serial_no, date_values, time_zone, environment)
 
             return Response(date_values, status=status.HTTP_200_OK)
         except Exception as e:
@@ -1193,7 +1207,7 @@ def session_fn(user_id):
     return session
 
 
-def date_range(request, start_date, end_date, user_id, device_serial_no, date_values, environment=None):
+def date_range(start_date, end_date, user_id, device_serial_no, date_values, time_zone, environment=None):
     from_date_time_obj = timezone.datetime.strptime(start_date, "%Y-%m-%d")
     end_date_time_obj = timezone.datetime.strptime(end_date, "%Y-%m-%d")
     date_range = end_date_time_obj - from_date_time_obj
@@ -1208,7 +1222,6 @@ def date_range(request, start_date, end_date, user_id, device_serial_no, date_va
         if environment:
             sessions = sessions.filter(environment=environment)
 
-        time_zone = get_local_time_zone(request)
         session_data_retrieve(sessions, date_values, time_zone)
     return date_values
 
@@ -1241,32 +1254,46 @@ def get_session_detail_history_for_graph(request):
             start_date = request.data.get('start_date', None)
             end_date = request.data.get('end_date', None)
             environment = request.data.get('environment', None)
+            time_zone = get_local_time_zone(request)
 
             if start_date and not end_date:
                 return Response("please provide End_date")
             if not start_date and end_date:
                 return Response("please provide Start_date")
             if start_date and end_date and device_serial_no:
-                date_range_graph(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+                date_range(start_date, end_date, user_id, device_serial_no, date_values, time_zone, environment)
             elif start_date and end_date:
                 session = session_fn(user_id)
                 if session:
                     device_serial_no = session.device_id.device_serial_no
-                    date_range_graph(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+                    date_range_graph(start_date, end_date, user_id, device_serial_no, date_values, time_zone,
+                                     environment)
+            elif environment and device_serial_no:
+                sessions = Session.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
+                                                  environment=environment)
+                session_data_graph(sessions, date_values, time_zone)
+            elif environment or device_serial_no:
+                sessions = Session.objects.filter(user_id=user_id)
+                if environment:
+                    sessions = sessions.filter(environment=environment)
+                if device_serial_no:
+                    sessions = sessions.filter(device_id__device_serial_no=device_serial_no)
+
+                session_data_graph(sessions, date_values, time_zone)
             else:
                 session = session_fn(user_id)
                 if session:
                     device_serial_no = session.device_id.device_serial_no
                     end_date = session.created_at.date().isoformat()
                     start_date = (session.created_at - timedelta(days=7)).date().isoformat()
-                    date_range_graph(request, start_date, end_date, user_id, device_serial_no, date_values, environment)
+                    date_range_graph(start_date, end_date, user_id, device_serial_no, date_values, environment)
 
             return Response(date_values, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-def date_range_graph(request, start_date, end_date, user_id, device_serial_no, date_values, environment):
+def date_range_graph(start_date, end_date, user_id, device_serial_no, date_values, time_zone, environment=None):
     from_date_time_obj = timezone.datetime.strptime(start_date, "%Y-%m-%d")
     end_date_time_obj = timezone.datetime.strptime(end_date, "%Y-%m-%d")
     date_range = end_date_time_obj - from_date_time_obj
@@ -1281,15 +1308,19 @@ def date_range_graph(request, start_date, end_date, user_id, device_serial_no, d
         if environment:
             sessions = sessions.filter(environment=environment)
 
-        time_zone = get_local_time_zone(request)
-        for session in sessions:
-            sub_values = {}
-            qs = SessionData.objects.filter(session_id=session)
-            data = qs.values_list('highest_energy_level', flat=True)
-            if data:
-                date_time = qs.order_by('-highest_energy_level').first().created_at
-                sub_values['created_at'] = convert_to_local_time(date_time, time_zone)
-                sub_values['highest_energy_level'] = max(data)
-                date_values.append(sub_values)
+        session_data_graph(sessions, date_values, time_zone)
 
+    return date_values
+
+
+def session_data_graph(sessions, date_values, time_zone):
+    for session in sessions:
+        sub_values = {}
+        qs = SessionData.objects.filter(session_id=session)
+        data = qs.values_list('highest_energy_level', flat=True)
+        if data:
+            date_time = qs.order_by('-highest_energy_level').first().created_at
+            sub_values['created_at'] = convert_to_local_time(date_time, time_zone)
+            sub_values['highest_energy_level'] = max(data)
+            date_values.append(sub_values)
     return date_values

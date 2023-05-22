@@ -127,11 +127,12 @@ def create_product(product_name, description):
     return product
 
 
-def create_price(amount, currency, interval, product_id):
+def create_price(amount, currency, interval, interval_count, product_id):
     price = stripe.Price.create(
         unit_amount=amount,
         currency=currency,
-        recurring={"interval": interval},
+        recurring={"interval": interval,
+                   "interval_count": interval_count},
         product=product_id,
     )
     return price

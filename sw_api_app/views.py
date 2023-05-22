@@ -666,13 +666,14 @@ def pdf_generate(sub_device, time_zone):
     try:
         data_list = []
         for data in sub_device:
+            date_time = convert_to_local_time(data.created_at, time_zone).strftime("%m/%d/%Y %I:%M %p")
             session_data = {}
             session_data.update({"device_id": data.device_id.device_serial_no})
             session_data.update({"device_name": data.device_id.device_name})
             session_data.update({"environment": data.session_id.environment})
             session_data.update({"highest_energy_level": data.highest_energy_level})
             session_data.update({"lowest_energy_level": data.lowest_energy_level})
-            session_data.update({"session_date": convert_to_local_time(data.created_at, time_zone)})
+            session_data.update({"session_date": date_time})
             data_list.append(session_data)
 
         initial_session_data = sub_device.first()
@@ -694,8 +695,10 @@ def pdf_generate(sub_device, time_zone):
         d = pdfkit.from_string(html_string, file_name)
         # Send the PDF file as a response to the user
         url = f'{settings.MY_DOMAIN}{file_name}'
-    except:
+    except Exception as e:
+        print(str(e))
         url = None
+
     return url
 
 

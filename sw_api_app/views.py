@@ -646,7 +646,7 @@ def get_session_data(sub_device, session_id, time_zone):
         return Response({"data": "Failure", "message": "Invalid Session ID Provided"}, status.HTTP_400_BAD_REQUEST)
     session_max_min = SessionData.objects.filter(session_id=session).aggregate(
         max_value=Max('highest_energy_level'),
-        min_value=Min('highest_energy_level'))
+        min_value=Min('lowest_energy_level'))
     response = {
         "device_id": session.device_id.pk,
         "device_serial_no": session.device_id.device_serial_no,

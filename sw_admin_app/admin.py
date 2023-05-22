@@ -1,5 +1,5 @@
 from django.contrib import admin, messages
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 
 from sw_admin_app.models import Device, Subscription, PaymentMethod, DevicePrice
 from sw_api_app.stripe import delete_subscription
@@ -18,20 +18,8 @@ class DeviceAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
-    def save_model(self, request, obj, form, change):
-        return False
-
     def has_delete_permission(self, request, obj=None):
         return False
-
-    # def save_model(self, request, obj, form, change):
-    #     super().save_model(request, obj, form, change)
-    #     product_name = obj.device_name
-    #     description = f'Product name : {product_name}, Product id : {obj.id}'
-    #     product_id = create_product(product_name, description)['id']
-    #     price_id = create_price(25, 'usd', 'month', product_id)['id']
-    #     obj.device_price_id = price_id
-    #     obj.save()
 
 
 class DevicePriceAdmin(admin.ModelAdmin):
@@ -52,7 +40,6 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_display = (
         'device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id', 'created_at',
         'updated_at')
-    # save_on_top = True
 
     readonly_fields = ('device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id')
     actions_on_top = False
@@ -63,9 +50,6 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
-
-    # def has_delete_permission(self, request, obj=None):
-    #     return False
 
     def message_user(self, request, message, level=messages.INFO, extra_tags='', fail_silently=False):
         message = 'Selected Subscription is cancelled !!!'
@@ -91,12 +75,12 @@ class PaymentMethodAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def save_model(self, request, obj, form, change):
-        return False
-
+    # def has_change_permission(self, request, obj=None):
+    #     return False
+    # l
+    # def save_model(self, request, obj, form, change):
+    #     return False
+    #
     def has_delete_permission(self, request, obj=None):
         return False
 

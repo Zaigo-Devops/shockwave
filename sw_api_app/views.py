@@ -782,10 +782,13 @@ def my_payment_method(request):
 """ function for get the updated price for recuring"""
 
 
-def device_price_update():
+def device_price_update(actual_price=False):
     device_price = DevicePrice.objects.order_by('-created_at').first()
     if device_price:
-        price = int(device_price.price * 100)
+        price = device_price.price
+        if actual_price:
+            return price
+        price = int(price * 100)
     else:
         price = '2500'
     return price
@@ -848,6 +851,7 @@ def payment_method_initialized(request):
                                                                stripe_payment_id=stripe_payment_id,
                                                                stripe_subscription_id=stripe_Subscription_id['id'],
                                                                stripe_customer_id=stripe_customer_id,
+                                                               subscription_price=device_price_update(actual_price=True),
                                                                start_date=start_date,
                                                                end_date=end_date)
                     return Response({"message": "payment done successfully"}, status=status.HTTP_200_OK)

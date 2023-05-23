@@ -36,12 +36,14 @@ class DevicePriceAdmin(admin.ModelAdmin):
 
 class SubscriptionAdmin(admin.ModelAdmin):
     model = Subscription
-    fields = ('device_id', 'user_id', 'payment_method_id', 'status', 'start_date', 'end_date')
+    fields = ('device_id', 'user_id', 'payment_method_id', 'subscription_price', 'status', 'start_date', 'end_date')
     list_display = (
-        'device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id', 'created_at',
+        'device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id',
+        "subscription_price", 'created_at',
         'updated_at')
 
-    readonly_fields = ('device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id')
+    readonly_fields = ('device_id', 'user_id', 'payment_method_id', 'status', 'stripe_payment_id', 'stripe_customer_id',
+                       'subscription_price')
     actions_on_top = False
     actions_on_bottom = False
 

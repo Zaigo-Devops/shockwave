@@ -18,16 +18,21 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from SHOCK_WAVE.settings import DOMAIN
 
 admin.site.site_url = '/admin'
 admin.site.site_header = 'SHOCK ALERT ADMIN'
 admin.site.site_title = 'Shock Alert site'
 admin.site.index_title = 'Welcome to Shock Alert Portal'
 
+
+
 urlpatterns = [
     path(
         'admin/password_reset/',
-        auth_views.PasswordResetView.as_view(),
+        auth_views.PasswordResetView.as_view(
+            extra_email_context={'site_name': DOMAIN, 'domain': DOMAIN, "protocol":"https"}
+            ),
         name='admin_password_reset',
     ),
     path(

@@ -154,6 +154,7 @@ LOGIN_REDIRECT_URL = '/'
 DEFAULT_FROM_EMAIL = str(os.getenv('DEFAULT_FROM_EMAIL'))
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
+DOMAIN = str(os.getenv('DOMAIN'))
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

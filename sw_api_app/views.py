@@ -726,17 +726,17 @@ def payment_method_creation(request):
                                                               card_cvc,
                                                               name, email, address)
             card_last4_number = created_payment_method_id['card']['last4']
-
-            payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id['id'],
-                                                             card_last4_no=card_last4_number,
-                                                             user_id_id=user_id)
-            attach_payment_method(stripe_customer_id, created_payment_method_id['id'])
+            attached = attach_payment_method(stripe_customer_id, created_payment_method_id['id'])
             customer_update = stripe.Customer.modify(stripe_customer_id,
                                                      invoice_settings={
                                                          'default_payment_method': created_payment_method_id['id']})
             billing_address = BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2,
                                                             city=city,
                                                             state=state, country=country, pin_code=postal_code)
+            if attached:
+                payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id['id'],
+                                                                 card_last4_no=card_last4_number,
+                                                                 user_id_id=user_id)
             if billing_address:
                 address_format = f"{line1} {line2} {city} {state} {postal_code}"
                 address_format = address_format.strip()

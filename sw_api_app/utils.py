@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.core.files.base import File
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
+import requests
 from SHOCK_WAVE import settings
 from SHOCK_WAVE.settings import EMAIL_PORT, EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
 import datetime
@@ -65,7 +65,7 @@ class SendMailNotification(threading.Thread):
 def get_attachment_from_name(member_name):
     # file_name = f"MEM_{member_name}{timezone.now().strftime('%Y%m%d%s%f')}.png"
     file_name = f"MEM_{member_name}{timezone.now().strftime('%Y%m%d%S%f')}.png"
-    
+
     avinit.get_png_avatar(member_name, output_file=f"media/{file_name}")
     return File(file=open(f"media/{file_name}", 'rb'), name=file_name)
 
@@ -146,11 +146,24 @@ def unix_timestamp_format(unix_timestamp):
     return formatted_date
 
 
-def get_recuring_periods(unix_timestamp_start_date,unix_timestamp_end_date):
+def get_recuring_periods(unix_timestamp_start_date, unix_timestamp_end_date):
     try:
         start_date = unix_timestamp_format(unix_timestamp_start_date)
         end_date = unix_timestamp_format(unix_timestamp_end_date)
     except:
         start_date = datetime.date.today()
         end_date = start_date + datetime.timedelta(days=30)
-    return {"start_date":start_date,"end_date":end_date}
+    return {"start_date": start_date, "end_date": end_date}
+
+
+def get_address(latitude, longitude):
+    url = f'https://nominatim.openstreetmap.org/reverse?format=json&lat={latitude}&lon={longitude}'
+
+    response = requests.get(url)
+    data = response.json()
+
+    if response.status_code == 200 and 'address' in data:
+        address = data['address']
+        return address
+    return None
+

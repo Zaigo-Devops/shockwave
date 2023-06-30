@@ -20,7 +20,7 @@ from .stripe import delete_subscription, create_payment_customer, create_payment
     create_address, create_product, create_price, create_subscription, delete_stripe_payment_method
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
     get_recuring_periods, \
-    unix_timestamp_format, INACTIVE
+    unix_timestamp_format, INACTIVE, get_address
 
 from django.contrib.auth import authenticate
 from requests import Response
@@ -851,7 +851,8 @@ def payment_method_initialized(request):
                                                                stripe_payment_id=stripe_payment_id,
                                                                stripe_subscription_id=stripe_Subscription_id['id'],
                                                                stripe_customer_id=stripe_customer_id,
-                                                               subscription_price=device_price_update(actual_price=True),
+                                                               subscription_price=device_price_update(
+                                                                   actual_price=True),
                                                                start_date=start_date,
                                                                end_date=end_date)
                     return Response({"message": "payment done successfully"}, status=status.HTTP_200_OK)
@@ -1340,3 +1341,48 @@ def session_data_graph(sessions, date_values, time_zone):
             sub_values['highest_energy_level'] = max(data)
             date_values.append(sub_values)
     return date_values
+
+
+@api_view(['POST'])
+def offline_session_sessiondata_save(request):
+    if request.method == "POST":
+        data = request.data
+        device_serial_no = data.get("device_serial_no")
+        environment = data.get("environment")
+        latitude = data.get("latitude")
+        longitude = data.get("longitude")
+        start_date_time = data.get("start_date_time")
+        end_date_time = data.get("end_date_time")
+        energy_levels = data.get("energy_levels")
+        location = data.get("location")
+        address_fetch = get_address(latitude, longitude)
+        city = address_fetch['city']
+        state = address_fetch['state']
+        pin_code = address_fetch['postcode']
+        country = address_fetch['country']
+        session_data = None
+        device_id = Device.objects.filter(device_serial_no=device_serial_no).first()
+        start_datetime = datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S")
+        end_datetime = datetime.strptime(end_date_time, "%Y-%m-%d %H:%M:%S")
+        user_id = get_member_id(request)
+        session_create = Session.objects.create(environment=environment, device_id=device_id,
+                                                user_id_id=user_id, location=location, city=city,
+                                                state=state, country=country,
+                                                pin_code=pin_code, latitude=latitude, session_end_date=end_datetime,
+                                                longitude=longitude)
+        session_create.created_at = start_datetime
+        session_create.save()
+        if session_create:
+            for energy in energy_levels:
+                highest_energy_level = energy['highest_energy_level']
+                date_time_format = energy['date_time']
+                date_time = datetime.strptime(date_time_format, "%Y-%m-%d %H:%M:%S")
+                low_energy_level = energy['low_energy_level'] if energy['low_energy_level'] else None
+                session_data = SessionData.objects.create(energy_data=energy,
+                                                          lowest_energy_level=low_energy_level,
+                                                          highest_energy_level=highest_energy_level,
+                                                          session_id=session_create,
+                                                          device_id=device_id, user_id_id=user_id)
+                session_data.created_at = date_time
+                session_data.save()
+        return Response({"message": "Session and session data save Successfully"}, status.HTTP_200_OK)

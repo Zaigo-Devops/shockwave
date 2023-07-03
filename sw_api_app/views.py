@@ -1411,8 +1411,8 @@ def offline_session_sessiondata_save(request):
         device_id = Device.objects.filter(device_serial_no=device_serial_no).first()
 
         try:
-            start_datetime = datetime.strptime(start_date_time[:-1], "%Y-%m-%d %H:%M:%S")
-            end_datetime = datetime.strptime(end_date_time[:-1], "%Y-%m-%d %H:%M:%S")
+            start_datetime = datetime.strptime(start_date_time[:-1], "%Y-%m-%d %H:%M:%S.%f")
+            end_datetime = datetime.strptime(end_date_time[:-1], "%Y-%m-%d %H:%M:%S.%f")
             user_id = get_member_id(request)
             session_create = Session.objects.create(environment=environment, device_id=device_id,
                                                     user_id_id=user_id, location=location, city=city,

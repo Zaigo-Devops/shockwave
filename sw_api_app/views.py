@@ -1256,6 +1256,8 @@ def session_data_retrieve(sessions, date_values, time_zone):
             sub_values['timestamp'] = convert_to_local_time(date_time, time_zone)
             sub_values['session_environment'] = session.environment
             sub_values['maximum_value'] = max(data)
+            sub_values['device_serial_no'] = session.device_id.device_serial_no
+
             date_values.append(sub_values)
     return date_values
 

@@ -117,6 +117,8 @@ class UserProfile(models.Model):
 class UserDevice(models.Model):
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, blank=True,
                                 related_name="user_device")
+    device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, default=None, null=True, blank=True,
+                                  related_name="device")
     mobile_device_id = models.CharField(max_length=256, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

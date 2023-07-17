@@ -742,32 +742,32 @@ def create_device_price_admin(request):
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def previous_connected_list(request):
-#     if request.method == 'GET':
-#         try:
-#             user_id = get_member_id(request)
-#             subscriptions = Subscription.objects.filter(user_id=user_id, status=1)
-#             final_list = []
-#             for subscription in subscriptions:
-#                 # This to show the remain days for subscription period to end.
-#                 end_date = datetime.fromisoformat(str(subscription.end_date))
-#                 current_date = datetime.now()
-#                 remaining_days = (end_date.date() - current_date.date()).days
-#                 registered_list = {'subscription_id': subscription.id,
-#                                    'subscription_stripe_payment_id': subscription.stripe_payment_id,
-#                                    'subscription_stripe_customer_id': subscription.stripe_customer_id,
-#                                    'device_name': subscription.device_id.device_name,
-#                                    'device_serial_no': subscription.device_id.device_serial_no,
-#                                    'is_subscription_active': subscription.status,
-#                                    'subscription_start_date': subscription.start_date,
-#                                    'subscription_end_date': subscription.end_date,
-#                                    'duration': remaining_days}
-#                 final_list.append(registered_list)
-#             return Response(final_list, status=status.HTTP_200_OK)
-#         except Exception as e:
-#             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def previous_connected_list(request):
+    if request.method == 'GET':
+        try:
+            user_id = get_member_id(request)
+            subscriptions = Subscription.objects.filter(user_id=user_id, status=1)
+            final_list = []
+            for subscription in subscriptions:
+                # This to show the remain days for subscription period to end.
+                end_date = datetime.fromisoformat(str(subscription.end_date))
+                current_date = datetime.now()
+                remaining_days = (end_date.date() - current_date.date()).days
+                registered_list = {'subscription_id': subscription.id,
+                                   'subscription_stripe_payment_id': subscription.stripe_payment_id,
+                                   'subscription_stripe_customer_id': subscription.stripe_customer_id,
+                                   'device_name': subscription.device_id.device_name,
+                                   'device_serial_no': subscription.device_id.device_serial_no,
+                                   'is_subscription_active': subscription.status,
+                                   'subscription_start_date': subscription.start_date,
+                                   'subscription_end_date': subscription.end_date,
+                                   'duration': remaining_days}
+                final_list.append(registered_list)
+            return Response(final_list, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET"])

@@ -1,7 +1,7 @@
 from django.contrib import admin, messages
 from django.contrib.auth.models import Group, User
 
-from sw_admin_app.models import Device, Subscription, PaymentMethod, DevicePrice
+from sw_admin_app.models import Device, Subscription, PaymentMethod, SubscriptionPrice
 from sw_api_app.stripe import delete_subscription
 
 
@@ -22,8 +22,8 @@ class DeviceAdmin(admin.ModelAdmin):
         return False
 
 
-class DevicePriceAdmin(admin.ModelAdmin):
-    model = DevicePrice
+class SubscriptionPriceAdmin(admin.ModelAdmin):
+    model = SubscriptionPrice
 
     list_display = ('price', 'updated_at')
 
@@ -90,5 +90,5 @@ class PaymentMethodAdmin(admin.ModelAdmin):
 admin.site.register(Device, DeviceAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
 admin.site.register(PaymentMethod, PaymentMethodAdmin)
-admin.site.register(DevicePrice, DevicePriceAdmin)
+admin.site.register(SubscriptionPrice, SubscriptionPriceAdmin)
 admin.site.unregister(Group)

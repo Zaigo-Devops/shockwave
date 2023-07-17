@@ -13,14 +13,14 @@ from ecdsa import SigningKey, NIST256p
 
 from SHOCK_WAVE import settings
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
-    UserProfile, DevicePrice, SubscriptionPeriod
+    UserProfile, SubscriptionPeriod, SubscriptionPrice
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
     create_address, create_product, create_price, create_subscription, delete_stripe_payment_method
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
     get_recuring_periods, \
-    unix_timestamp_format, INACTIVE, get_address
+    unix_timestamp_format, INACTIVE, get_address, ACTIVE
 
 from django.contrib.auth import authenticate
 from requests import Response
@@ -81,12 +81,15 @@ class RegisterUserAPIView(generics.CreateAPIView):
             'name': user_name,
             'email_id': user.email
         }
+        """Check The login user is Subscribed App or Not and send the data is response"""
+        app_subscribed = Subscription.objects.filter(user_id=user.pk, status=ACTIVE, app_subscribed=True).exists()
         for item in token_items:
             if item != "user_id":
                 RefreshToken.__setitem__(token, item, token_items[item])
         token_items['access_token'] = access_token
         token_items['refresh_token'] = str(token)
         token_items['device_count'] = payment_method
+        token_items['is_app_subscribed'] = app_subscribed
         token_items['payment_method_added'] = payment_method_added
         token_items['payment_method_count'] = payment_method
         token_items['session_count'] = session_count
@@ -122,12 +125,15 @@ class LoginView(APIView):
                 'name': user_name,
                 'email_id': user.email
             }
+            """Check The login user is Subscribed App or Not and send the data is response"""
+            app_subscribed = Subscription.objects.filter(user_id=user.pk, status=1, app_subscribed=True).exists()
             for item in token_items:
                 if item != "user_id":
                     RefreshToken.__setitem__(token, item, token_items[item])
             token_items['access_token'] = access_token
             token_items['refresh_token'] = str(token)
             token_items['device_count'] = payment_method
+            token_items['is_app_subscribed'] = app_subscribed
             token_items['payment_method_added'] = payment_method_added
             token_items['payment_method_count'] = payment_method
             token_items['session_count'] = session_count
@@ -150,16 +156,51 @@ class LoginView(APIView):
             return Response(content, status=status.HTTP_400_BAD_REQUEST)
 
 
+"""
+For Each Device check whether is subscribed or not
+"""
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def is_device_registration(request):
+#     if request.method == 'POST':
+#         try:
+#             device_serial_no = request.data.get('device_serial_no', None)
+#             user_id = get_member_id(request)
+#             subscription = Subscription.objects.filter(user_id=user_id,
+#                                                        device_id__device_serial_no=device_serial_no, status=1).first()
+#             device_price = DevicePrice.objects.get()
+#             duration = '30'
+#             if subscription:
+#                 if subscription.status == 1:
+#                     start_date = subscription.start_date
+#                     end_date = subscription.end_date
+#                     duration = end_date - start_date
+#                     return Response({"is_subscribed": True,
+#                                      "device_price": device_price.price,
+#                                      "duration": duration.days}, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({"is_subscribed": False,
+#                                  "device_price": device_price.price,
+#                                  "duration": duration}, status=status.HTTP_200_OK)
+#         except Exception as e:
+#             return Response({"is_subscribed": False, "message": "From Exception", "error": "From Exception"},
+#                             status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def is_device_registration(request):
+    """
+    For Each user Need to check whether the App subscribed or not
+    """
     if request.method == 'POST':
         try:
-            device_serial_no = request.data.get('device_serial_no', None)
             user_id = get_member_id(request)
             subscription = Subscription.objects.filter(user_id=user_id,
-                                                       device_id__device_serial_no=device_serial_no, status=1).first()
-            device_price = DevicePrice.objects.get()
+                                                       app_subscribed=True, status=1).first()
+            app_price = SubscriptionPrice.objects.get()
             duration = '30'
             if subscription:
                 if subscription.status == 1:
@@ -167,11 +208,11 @@ def is_device_registration(request):
                     end_date = subscription.end_date
                     duration = end_date - start_date
                     return Response({"is_subscribed": True,
-                                     "device_price": device_price.price,
+                                     "device_price": app_price.price,
                                      "duration": duration.days}, status=status.HTTP_200_OK)
             else:
                 return Response({"is_subscribed": False,
-                                 "device_price": device_price.price,
+                                 "device_price": app_price.price,
                                  "duration": duration}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"is_subscribed": False, "message": "From Exception", "error": "From Exception"},
@@ -224,7 +265,9 @@ class OtpVerified(APIView):
                             if payment_method > 0:
                                 payment_method_added = True
                             session_count = user.session_set.count()
-
+                            """Check The login user is Subscribed App or Not and send the data is response"""
+                            app_subscribed = Subscription.objects.filter(user_id=user.pk, status=1,
+                                                                         app_subscribed=True).exists()
                             token_items = {
                                 'user_id': user.pk,
                                 'name': user_name,
@@ -236,6 +279,7 @@ class OtpVerified(APIView):
                             token_items['access_token'] = str(token.access_token)
                             token_items['refresh_token'] = str(token)
                             token_items['device_count'] = payment_method
+                            token_items['is_app_subscribed'] = app_subscribed
                             token_items['payment_method_added'] = payment_method_added
                             token_items['payment_method_count'] = payment_method
                             token_items['session_count'] = session_count
@@ -335,9 +379,61 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     queryset = Subscription.objects.all()
 
 
+"""Session Setup for a device, In this We checked whether a each session setup device is subscribed or Not"""
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def session_setup(request):
+#     try:
+#         if request.method == 'POST':
+#             data = request.data
+#             user_id = get_member_id(request)
+#             environment = data.get('environment', None)
+#             location = data.get('location', None)
+#             device_serial_no = data.get('device_serial_no', None)
+#             city = data.get('city', None)
+#             state = data.get('state', None)
+#             country = data.get('country', None)
+#             pin_code = data.get('pin_code', None)
+#             latitude = data.get('latitude', None)
+#             longitude = data.get('longitude', None)
+#             if device_serial_no:
+#                 is_device = Device.objects.filter(device_serial_no=device_serial_no).first()
+#                 if is_device:
+#                     is_subscribed = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, status=1)
+#                     if is_subscribed:
+#                         if environment and location and is_device and user_id:
+#                             user = User.objects.filter(pk=user_id).first()
+#                             session_create = Session.objects.create(environment=environment, device_id=is_device,
+#                                                                     user_id=user, location=location, city=city,
+#                                                                     state=state, country=country,
+#                                                                     pin_code=pin_code, latitude=latitude,
+#                                                                     longitude=longitude)
+#                             return Response(
+#                                 {'message': 'Session Created Successfully', 'session_id': session_create.pk},
+#                                 status=status.HTTP_200_OK)
+#                         else:
+#                             return Response({'message': 'Please provide valid data information'},
+#                                             status=status.HTTP_400_BAD_REQUEST)
+#                     else:
+#                         return Response({"message": "No Subscription is Active for this device, Please do payment for "
+#                                                     "further process "}, status=status.HTTP_204_NO_CONTENT)
+#                 else:
+#                     return Response({"message": "Device not found,please provide valid device id"},
+#                                     status=status.HTTP_204_NO_CONTENT)
+#     except Exception as e:
+#         return Response({"message": "Failed, to setup the session", "reason": str(e)},
+#                         status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def session_setup(request):
+    """
+    Session Setup with any device only by subscribed the App.
+    so Here the App validation is Handled.
+    """
     try:
         if request.method == 'POST':
             data = request.data
@@ -345,53 +441,86 @@ def session_setup(request):
             environment = data.get('environment', None)
             location = data.get('location', None)
             device_serial_no = data.get('device_serial_no', None)
+            if not device_serial_no:
+                return Response({"message": "Please Provide Device serial number"}, status.HTTP_400_BAD_REQUEST)
+            device_name = data.get('device_name', None)
             city = data.get('city', None)
             state = data.get('state', None)
             country = data.get('country', None)
             pin_code = data.get('pin_code', None)
             latitude = data.get('latitude', None)
             longitude = data.get('longitude', None)
-            if device_serial_no:
-                is_device = Device.objects.filter(device_serial_no=device_serial_no).first()
-                if is_device:
-                    is_subscribed = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, status=1)
-                    if is_subscribed:
-                        if environment and location and is_device and user_id:
-                            user = User.objects.filter(pk=user_id).first()
-                            session_create = Session.objects.create(environment=environment, device_id=is_device,
-                                                                    user_id=user, location=location, city=city,
-                                                                    state=state, country=country,
-                                                                    pin_code=pin_code, latitude=latitude,
-                                                                    longitude=longitude)
-                            return Response(
-                                {'message': 'Session Created Successfully', 'session_id': session_create.pk},
-                                status=status.HTTP_200_OK)
-                        else:
-                            return Response({'message': 'Please provide valid data information'},
-                                            status=status.HTTP_400_BAD_REQUEST)
-                    else:
-                        return Response({"message": "No Subscription is Active for this device, Please do payment for "
-                                                    "further process "}, status=status.HTTP_204_NO_CONTENT)
+            is_device_exists = Device.objects.filter(device_serial_no=device_serial_no).first()
+            if is_device_exists:
+                device_serial_no = is_device_exists
+                print("exist")
+            else:
+                device_serial_no = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name)
+                print("new")
+            is_subscribed = Subscription.objects.filter(app_subscribed=True, status=1).first()
+            if is_subscribed:
+                if environment and location and device_serial_no and user_id:
+                    user = User.objects.filter(pk=user_id).first()
+                    session_create = Session.objects.create(environment=environment, device_id=device_serial_no,
+                                                            user_id=user, location=location, city=city,
+                                                            state=state, country=country,
+                                                            pin_code=pin_code, latitude=latitude,
+                                                            longitude=longitude)
+                    return Response(
+                        {'message': 'Session Created Successfully', 'session_id': session_create.pk},
+                        status=status.HTTP_200_OK)
                 else:
-                    return Response({"message": "Device not found,please provide valid device id"},
-                                    status=status.HTTP_204_NO_CONTENT)
+                    return Response({'message': 'Please provide valid data information'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({"message": "No Subscription is Active for APP, Please do payment for "
+                                            "further process "}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"message": "Device not found,please provide valid device id"},
+                            status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({"message": "Failed, to setup the session", "reason": str(e)},
                         status=status.HTTP_400_BAD_REQUEST)
 
 
+"""For each device they able to cancel there subscription by user"""
+#
+#
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def cancel_registration(request):
+#     if request.method == 'POST':
+#         try:
+#             user_id = get_member_id(request)
+#             device_serial_no = request.data['device_serial_no']
+#             subscription = Subscription.objects.filter(user_id=user_id,
+#                                                        device_id__device_serial_no=device_serial_no, status=1).first()
+#             if subscription:
+#                 delete_subscription(subscription.stripe_subscription_id)
+#                 # setattr(subscription, 'status', 0)
+#                 subscription.status = 0
+#                 subscription.save()
+#                 return Response({'message': 'Subscription Cancelled !!!'}, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({'message': 'Invalid ID Provided'}, status=status.HTTP_400_BAD_REQUEST)
+#         except Exception as e:
+#             return Response({"error_message": str(e)},
+#                             status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def cancel_registration(request):
+    """
+    For App cancel there subscription by user
+    """
     if request.method == 'POST':
         try:
             user_id = get_member_id(request)
-            device_serial_no = request.data['device_serial_no']
             subscription = Subscription.objects.filter(user_id=user_id,
-                                                       device_id__device_serial_no=device_serial_no, status=1).first()
+                                                       app_subscribed=True, status=1).first()
             if subscription:
                 delete_subscription(subscription.stripe_subscription_id)
-                # setattr(subscription, 'status', 0)
                 subscription.status = 0
                 subscription.save()
                 return Response({'message': 'Subscription Cancelled !!!'}, status=status.HTTP_200_OK)
@@ -400,6 +529,50 @@ def cancel_registration(request):
         except Exception as e:
             return Response({"error_message": str(e)},
                             status=status.HTTP_400_BAD_REQUEST)
+
+
+"""Session Data save for a device, In this We checked whether a each device is subscribed or Not"""
+
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def session_data_save(request, session_id):
+#     """
+#     Api for save the session data history against the respective user,device and session.
+#     """
+#     try:
+#         data = request.data
+#         session_data = data.get('session_data', None)
+#         device_serial_no = data.get('device_serial_no', None)
+#         user_id = get_member_id(request)
+#         if session_id and session_data and device_serial_no and user_id:
+#             # device = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').first()
+#             subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
+#                                                        status=1).order_by('-created_at').first()
+#             if subscription.device_id:
+#                 user = User.objects.filter(pk=user_id).first()
+#                 session = Session.objects.filter(pk=session_id).first()
+#                 # session data value provide as list so save as json with key "energy_levels"
+#                 energy_list = session_data['energy_levels']
+#                 # In list take overall minimum and maximum for a session by using below function.
+#                 low_energy_level = min(energy_list)
+#                 high_energy_level = max(energy_list)
+#                 session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
+#                                                           highest_energy_level=high_energy_level, session_id=session,
+#                                                           device_id_id=subscription.device_id.id, user_id=user)
+#                 end_date = session_data.created_at
+#                 Session.objects.filter(pk=session_id).update(session_end_date=end_date)
+#                 return Response({"message": "Session Data Save Successfully"}, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({'message': "Device not found"}, status=status.HTTP_204_NO_CONTENT)
+#         else:
+#             return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
+#     except Exception as e:
+#         return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+Session save based on device and Checked whether app is subscribed or not
+"""
 
 
 @api_view(["POST"])
@@ -414,10 +587,11 @@ def session_data_save(request, session_id):
         device_serial_no = data.get('device_serial_no', None)
         user_id = get_member_id(request)
         if session_id and session_data and device_serial_no and user_id:
-            # device = Device.objects.filter(device_serial_no=device_serial_no).order_by('-created_at').first()
-            subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
-                                                       status=1).order_by('-created_at').first()
-            if subscription.device_id:
+            subscription = Subscription.objects.filter(app_subscribed=True, user_id=user_id,
+                                                       status=1).first()
+
+            device = Device.objects.filter(device_serial_no=device_serial_no).first()
+            if subscription and device:
                 user = User.objects.filter(pk=user_id).first()
                 session = Session.objects.filter(pk=session_id).first()
                 # session data value provide as list so save as json with key "energy_levels"
@@ -427,14 +601,14 @@ def session_data_save(request, session_id):
                 high_energy_level = max(energy_list)
                 session_data = SessionData.objects.create(energy_data=energy_list, lowest_energy_level=low_energy_level,
                                                           highest_energy_level=high_energy_level, session_id=session,
-                                                          device_id_id=subscription.device_id.id, user_id=user)
+                                                          device_id=device, user_id=user)
                 end_date = session_data.created_at
                 Session.objects.filter(pk=session_id).update(session_end_date=end_date)
                 return Response({"message": "Session Data Save Successfully"}, status=status.HTTP_200_OK)
             else:
-                return Response({'message': "Device not found"}, status=status.HTTP_204_NO_CONTENT)
+                return Response({'message': "Device not found or Not subscribed"}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({'message': "Please provide valid data"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'message': "Please provide valid data"}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -559,7 +733,7 @@ def create_device_price_admin(request):
     if request.method == 'POST':
         try:
             device_price = request.data['device_price']
-            DevicePrice.objects.create(price=device_price)
+            SubscriptionPrice.objects.create(price=device_price)
             return Response('Device price created successfully', status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -782,10 +956,10 @@ def my_payment_method(request):
 """ function for get the updated price for recuring"""
 
 
-def device_price_update(actual_price=False):
-    device_price = DevicePrice.objects.order_by('-created_at').first()
-    if device_price:
-        price = device_price.price
+def app_price_update(actual_price=False):
+    app_price = SubscriptionPrice.objects.order_by('-created_at').first()
+    if app_price:
+        price = app_price.price
         if actual_price:
             return price
         price = int(price * 100)
@@ -794,71 +968,149 @@ def device_price_update(actual_price=False):
     return price
 
 
+"""Subscription Activate for a device"""
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def payment_method_initialized(request):
+#     try:
+#         if request.method == "POST":
+#             device_serial_no = request.data.get('device_serial_no')
+#             device_name = request.data.get('device_name')
+#             payment_method_id = request.data.get('payment_method_id')
+#
+#             user_id = get_member_id(request)
+#             user = User.objects.get(pk=user_id)
+#             user_profile = UserProfile.objects.get(user_id=user_id)
+#             stripe_customer_id = user_profile.stripe_customer_id
+#             is_device_exists = Subscription.objects.filter(user_id=user_id,
+#                                                            device_id__device_serial_no=device_serial_no,
+#                                                            status=1).exists()
+#             if not is_device_exists:
+#                 if payment_method_id:
+#                     payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
+#                         '-created_at').first()
+#                 else:
+#                     payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
+#                 stripe_payment_id = payment_method.payment_id
+#                 if device_serial_no and device_name and stripe_customer_id:
+#                     stripe_product_id = create_product(product_name=device_serial_no,
+#                                                        description=f'The {device_name},{device_serial_no} device is '
+#                                                                    f'registered.')['id']
+#                     device_price = device_price_update()
+#                     stripe_product_price_id = \
+#                         create_price(amount=device_price, currency='usd', interval='day', interval_count=30,
+#                                      product_id=stripe_product_id)['id']
+#                     stripe_Subscription_id = \
+#                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
+#                                             default_payment_method=stripe_payment_id)
+#
+#                     if stripe_Subscription_id.status == "active":
+#                         recuring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,
+#                                                                stripe_Subscription_id.current_period_end)
+#                         start_date = recuring_period["start_date"]
+#                         end_date = recuring_period["end_date"]
+#                     else:
+#                         # Pay Latest Invoice of Subscription
+#                         invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)  # Invoice already not paid
+#                         # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
+#                         # need to register the device in our table
+#                         recuring_period = get_recuring_periods(invoice.lines.data[0].period.start,
+#                                                                invoice.lines.data[0].period.end)
+#                         start_date = recuring_period["start_date"]
+#                         end_date = recuring_period["end_date"]
+#
+#                     register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
+#                                                             device_price_id=stripe_product_price_id)
+#                     subscription = Subscription.objects.create(status=INACTIVE, device_id=register_device, user_id=user,
+#                                                                payment_method_id=payment_method,
+#                                                                stripe_payment_id=stripe_payment_id,
+#                                                                stripe_subscription_id=stripe_Subscription_id['id'],
+#                                                                stripe_customer_id=stripe_customer_id,
+#                                                                subscription_price=device_price_update(
+#                                                                    actual_price=True),
+#                                                                start_date=start_date,
+#                                                                end_date=end_date)
+#                     return Response({"message": "payment done successfully"}, status=status.HTTP_200_OK)
+#                 return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
+#             else:
+#                 return Response({"message": "This device is already Subscribed"}, status=status.HTTP_200_OK)
+#     except Exception as e:
+#         error_msg = str(e)
+#         split_error_msg = str(e).split(":")
+#         if len(split_error_msg) > 1:
+#             error_msg = split_error_msg[1].strip()
+#         return Response({"status": "failure", "error": error_msg, "message": error_msg},
+#                         status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def payment_method_initialized(request):
+    """
+    Subscription Activate for a APP --- Recurring Payment
+    """
     try:
         if request.method == "POST":
-            device_serial_no = request.data.get('device_serial_no')
-            device_name = request.data.get('device_name')
             payment_method_id = request.data.get('payment_method_id')
-
             user_id = get_member_id(request)
-            user = User.objects.get(pk=user_id)
-            user_profile = UserProfile.objects.get(user_id=user_id)
+            try:
+                user = User.objects.get(pk=user_id)
+                user_profile = UserProfile.objects.get(user_id=user_id)
+            except:
+                return Response({'msg': "User or User Profile Does Not Exists"}, status.HTTP_400_BAD_REQUEST)
             stripe_customer_id = user_profile.stripe_customer_id
-            is_device_exists = Subscription.objects.filter(user_id=user_id,
-                                                           device_id__device_serial_no=device_serial_no,
-                                                           status=1).exists()
-            if not is_device_exists:
+            user_unique_indentifer = f'{user.first_name}-{user.email}'  # For product create against the user
+            # check whether app is subscribed or not
+            is_app_subscribed = Subscription.objects.filter(user_id=user_id,
+                                                            app_subscribed=True,
+                                                            status=1).exists()
+            if not is_app_subscribed:
                 if payment_method_id:
                     payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
                         '-created_at').first()
                 else:
                     payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
                 stripe_payment_id = payment_method.payment_id
-                if device_serial_no and device_name and stripe_customer_id:
-                    stripe_product_id = create_product(product_name=device_serial_no,
-                                                       description=f'The {device_name},{device_serial_no} device is '
-                                                                   f'registered.')['id']
-                    device_price = device_price_update()
+                if stripe_customer_id:
+                    stripe_product_id = create_product(product_name=user_unique_indentifer,
+                                                       description=f'For {user.first_name},unique identifier {user_unique_indentifer}  is '
+                                                                   f'registered for App.')['id']
+                    app_price = app_price_update()
                     stripe_product_price_id = \
-                        create_price(amount=device_price, currency='usd', interval='day', interval_count=30,
+                        create_price(amount=app_price, currency='usd', interval='day', interval_count=30,
                                      product_id=stripe_product_id)['id']
                     stripe_Subscription_id = \
                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
                                             default_payment_method=stripe_payment_id)
 
                     if stripe_Subscription_id.status == "active":
-                        recuring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,
-                                                               stripe_Subscription_id.current_period_end)
-                        start_date = recuring_period["start_date"]
-                        end_date = recuring_period["end_date"]
+                        recurring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,
+                                                                stripe_Subscription_id.current_period_end)
+                        start_date = recurring_period["start_date"]
+                        end_date = recurring_period["end_date"]
                     else:
-                        # Pay Latest Invoice of Subscription 
+                        # Pay Latest Invoice of Subscription
                         invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)  # Invoice already not paid
-                        # payment_intent = stripe.PaymentIntent.create(amount=2500, currency='usd')
-                        # need to register the device in our table
-                        recuring_period = get_recuring_periods(invoice.lines.data[0].period.start,
-                                                               invoice.lines.data[0].period.end)
-                        start_date = recuring_period["start_date"]
-                        end_date = recuring_period["end_date"]
-
-                    register_device = Device.objects.create(device_serial_no=device_serial_no, device_name=device_name,
-                                                            device_price_id=stripe_product_price_id)
-                    subscription = Subscription.objects.create(status=INACTIVE, device_id=register_device, user_id=user,
+                        recurring_period = get_recuring_periods(invoice.lines.data[0].period.start,
+                                                                invoice.lines.data[0].period.end)
+                        start_date = recurring_period["start_date"]
+                        end_date = recurring_period["end_date"]
+                    subscription = Subscription.objects.create(status=INACTIVE, user_id=user,
+                                                               app_subscribed=False,
                                                                payment_method_id=payment_method,
                                                                stripe_payment_id=stripe_payment_id,
                                                                stripe_subscription_id=stripe_Subscription_id['id'],
                                                                stripe_customer_id=stripe_customer_id,
-                                                               subscription_price=device_price_update(
+                                                               subscription_price=app_price_update(
                                                                    actual_price=True),
                                                                start_date=start_date,
                                                                end_date=end_date)
                     return Response({"message": "payment done successfully"}, status=status.HTTP_200_OK)
                 return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
             else:
-                return Response({"message": "This device is already Subscribed"}, status=status.HTTP_200_OK)
+                return Response({"message": "This App is already Subscribed"}, status=status.HTTP_200_OK)
     except Exception as e:
         error_msg = str(e)
         split_error_msg = str(e).split(":")
@@ -1067,43 +1319,48 @@ def cancel_payment_method(request):
             return Response({'Error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def activate_device(request):
-    device_serial_no = request.data.get('device_serial_no', None)
-    device_value = request.data.get('device_value', None)
-    if not device_serial_no:
-        return Response({"status": "failure", "error": "Device Serial Number is missing"}, status.HTTP_400_BAD_REQUEST)
-    if not device_value:
-        return Response({"status": "failure", "error": "Device Value is missing"}, status.HTTP_400_BAD_REQUEST)
-    user_id = get_member_id(request)
-    subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
-                                               status=1).order_by(
-        '-created_at').first()
-    if not subscription:
-        return Response({"status": "failure", "error": "Subscription is not exist/active"}, status.HTTP_400_BAD_REQUEST)
-    end_date = subscription.end_date
-    difference_in_days = (end_date - timezone.now()).days
-    # difference_in_days = (datetime.date.today() - end_date).days
-    if difference_in_days >= 0:
-        # text_to_replaced = 1.5 * difference_in_days
-        # hex_conversion = hex(int(text_to_replaced))[2:]
-        # text_to_be_replaced = hex_conversion.zfill(2)
-        text_to_be_replaced = "02"
-        device_value_list = list(device_value)
-        device_value_list[2] = text_to_be_replaced[0]
-        device_value_list[3] = text_to_be_replaced[1]
-        device_value = "".join(device_value_list)
-        # print("Updated device value", device_value)
-        hex_value = generate_hex_string(device_value)
-        if not hex_value:
-            return Response({"status": "failure", "error": "Unable to get the device code"},
-                            status.HTTP_400_BAD_REQUEST)
-        return Response({"status": "success", "message": "Device Activated", "updated_device_value": device_value,
-                         "device_code": hex_value.upper()}, status.HTTP_200_OK)
-    return Response(
-        {"status": "failure", "error": f"Unable to get the response as subscription days left is {difference_in_days}"},
-        status.HTTP_400_BAD_REQUEST)
+"""
+Device Activate is Not need now for device ,bcz They Unlock the device for all users
+"""
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def activate_device(request):
+#     device_serial_no = request.data.get('device_serial_no', None)
+#     device_value = request.data.get('device_value', None)
+#     if not device_serial_no:
+#         return Response({"status": "failure", "error": "Device Serial Number is missing"}, status.HTTP_400_BAD_REQUEST)
+#     if not device_value:
+#         return Response({"status": "failure", "error": "Device Value is missing"}, status.HTTP_400_BAD_REQUEST)
+#     user_id = get_member_id(request)
+#     subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
+#                                                status=1).order_by(
+#         '-created_at').first()
+#     if not subscription:
+#         return Response({"status": "failure", "error": "Subscription is not exist/active"}, status.HTTP_400_BAD_REQUEST)
+#     end_date = subscription.end_date
+#     difference_in_days = (end_date - timezone.now()).days
+#     # difference_in_days = (datetime.date.today() - end_date).days
+#     if difference_in_days >= 0:
+#         # text_to_replaced = 1.5 * difference_in_days
+#         # hex_conversion = hex(int(text_to_replaced))[2:]
+#         # text_to_be_replaced = hex_conversion.zfill(2)
+#         text_to_be_replaced = "02"
+#         device_value_list = list(device_value)
+#         device_value_list[2] = text_to_be_replaced[0]
+#         device_value_list[3] = text_to_be_replaced[1]
+#         device_value = "".join(device_value_list)
+#         # print("Updated device value", device_value)
+#         hex_value = generate_hex_string(device_value)
+#         if not hex_value:
+#             return Response({"status": "failure", "error": "Unable to get the device code"},
+#                             status.HTTP_400_BAD_REQUEST)
+#         return Response({"status": "success", "message": "Device Activated", "updated_device_value": device_value,
+#                          "device_code": hex_value.upper()}, status.HTTP_200_OK)
+#     return Response(
+#         {"status": "failure", "error": f"Unable to get the response as subscription days left is {difference_in_days}"},
+#         status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])

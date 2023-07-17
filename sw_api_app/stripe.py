@@ -46,7 +46,9 @@ def stripe_webhook(request):
         subscription = Subscription.objects.filter(stripe_subscription_id=stripe_Subscription_id,
                                                    stripe_customer_id=stripe_customer_id).first()
         if subscription:
+            """After payment successful, Change the subscribed status and app subscribed is active"""
             subscription.status = ACTIVE
+            subscription.app_subscribed = True
             subscription.start_date = start_date
             subscription.end_date = end_date
             subscription.save()
@@ -55,7 +57,8 @@ def stripe_webhook(request):
                                               stripe_customer_id=stripe_customer_id, start_date=start_date,
                                               end_date=end_date)
             
-    if  event.type == 'invoice.payment_failed':
+    if event.type == 'invoice.payment_failed':
+        """payment Failed, Change the subscribed status and app subscribed is In-active"""
         payment_intent = event.data.object
         stripe_subscription_id = payment_intent.subscription
         stripe_customer_id = payment_intent.customer
@@ -64,6 +67,7 @@ def stripe_webhook(request):
                                                 stripe_customer_id=stripe_customer_id).first()
         if subscription:
             subscription.status = INACTIVE
+            subscription.app_subscribed = False
             subscription.save()
     else:
         print('Unhandled event type {}'.format(event.type))

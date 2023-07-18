@@ -69,6 +69,7 @@ class RegisterUserAPIView(generics.CreateAPIView):
         token.set_exp(from_time=None, lifetime=timedelta(days=367))
 
         payment_method = user.paymentmethod_set.count()
+        device_count = UserDevice.objects.filter(user_id=user).count()
         payment_method_added = False
         if payment_method > 0:
             payment_method_added = True
@@ -88,7 +89,7 @@ class RegisterUserAPIView(generics.CreateAPIView):
                 RefreshToken.__setitem__(token, item, token_items[item])
         token_items['access_token'] = access_token
         token_items['refresh_token'] = str(token)
-        token_items['device_count'] = payment_method
+        token_items['device_count'] = device_count
         token_items['is_app_subscribed'] = app_subscribed
         token_items['payment_method_added'] = payment_method_added
         token_items['payment_method_count'] = payment_method
@@ -119,21 +120,30 @@ class LoginView(APIView):
             if payment_method > 0:
                 payment_method_added = True
             session_count = user.session_set.count()
-
             token_items = {
                 'user_id': user.pk,
                 'name': user_name,
                 'email_id': user.email
             }
             """Check The login user is Subscribed App or Not and send the data is response"""
-            app_subscribed = Subscription.objects.filter(user_id=user.pk, status=1, app_subscribed=True).exists()
+            device_count = UserDevice.objects.filter(user_id=user).count()
+            subscribed = Subscription.objects.filter(user_id=user.pk, status=1, app_subscribed=True).first()
+            # This to show the remain days for subscription period to end.
+            remaining_days = 0
+            if subscribed:
+                end_date = datetime.fromisoformat(str(subscribed.end_date))
+                current_date = datetime.now()
+                remaining_days = (end_date.date() - current_date.date()).days
             for item in token_items:
                 if item != "user_id":
                     RefreshToken.__setitem__(token, item, token_items[item])
             token_items['access_token'] = access_token
             token_items['refresh_token'] = str(token)
-            token_items['device_count'] = payment_method
-            token_items['is_app_subscribed'] = app_subscribed
+            token_items['device_count'] = device_count
+            token_items['subscription_start_date'] = subscribed.start_date if subscribed else None
+            token_items['subscription_end_date'] = subscribed.end_date if subscribed else None
+            token_items['duration'] = remaining_days
+            token_items['is_app_subscribed'] = True if subscribed else False
             token_items['payment_method_added'] = payment_method_added
             token_items['payment_method_count'] = payment_method
             token_items['session_count'] = session_count
@@ -266,8 +276,15 @@ class OtpVerified(APIView):
                                 payment_method_added = True
                             session_count = user.session_set.count()
                             """Check The login user is Subscribed App or Not and send the data is response"""
-                            app_subscribed = Subscription.objects.filter(user_id=user.pk, status=1,
-                                                                         app_subscribed=True).exists()
+                            device_count = UserDevice.objects.filter(user_id=user).count()
+                            subscribed = Subscription.objects.filter(user_id=user.pk, status=1,
+                                                                     app_subscribed=True).first()
+                            # This to show the remain days for subscription period to end.
+                            remaining_days = 0
+                            if subscribed:
+                                end_date = datetime.fromisoformat(str(subscribed.end_date))
+                                current_date = datetime.now()
+                                remaining_days = (end_date.date() - current_date.date()).days
                             token_items = {
                                 'user_id': user.pk,
                                 'name': user_name,
@@ -278,8 +295,11 @@ class OtpVerified(APIView):
                                     RefreshToken.__setitem__(token, item, token_items[item])
                             token_items['access_token'] = str(token.access_token)
                             token_items['refresh_token'] = str(token)
-                            token_items['device_count'] = payment_method
-                            token_items['is_app_subscribed'] = app_subscribed
+                            token_items['device_count'] = device_count
+                            token_items['subscription_start_date'] = subscribed.start_date if subscribed else None
+                            token_items['subscription_end_date'] = subscribed.end_date if subscribed else None
+                            token_items['duration'] = remaining_days
+                            token_items['is_app_subscribed'] = True if subscribed else False
                             token_items['payment_method_added'] = payment_method_added
                             token_items['payment_method_count'] = payment_method
                             token_items['session_count'] = session_count
@@ -307,7 +327,7 @@ class OtpVerified(APIView):
                                     status=status.HTTP_422_UNPROCESSABLE_ENTITY)
             else:
                 return Response({'error': 'Email does not exists, please provide valid email'},
-                                status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                                status=status.HTTP_422_UNPROCESSABLE_ENTITY) -m
         except Exception as e:
             return Response({'error': 'Please provide valid email information', "msg": str(e)},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -459,8 +479,7 @@ def session_setup(request):
                 user_device = UserDevice.objects.filter(device_id=device_serial_no, user_id_id=user_id).exists()
                 if not user_device:
                     UserDevice.objects.create(device_id=device_serial_no, user_id_id=user_id)
-            is_user_device = UserDevice.objects.filter(device_id=is_device_exists).first()
-            is_subscribed = Subscription.objects.filter(app_subscribed=True, status=1).first()
+            is_subscribed = Subscription.objects.filter(app_subscribed=True, status=1, user_id_id=user_id).first()
             if is_subscribed:
                 if environment and location and device_serial_no and user_id:
                     user = User.objects.filter(pk=user_id).first()
@@ -487,6 +506,8 @@ def session_setup(request):
 
 
 """For each device they able to cancel there subscription by user"""
+
+
 #
 #
 # @api_view(['POST'])
@@ -742,29 +763,54 @@ def create_device_price_admin(request):
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+"""User connected device list"""
+
+
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def previous_connected_list(request):
+#     if request.method == 'GET':
+#         try:
+#             user_id = get_member_id(request)
+#             subscriptions = Subscription.objects.filter(user_id=user_id, status=1)
+#             final_list = []
+#             for subscription in subscriptions:
+#                 # This to show the remain days for subscription period to end.
+#                 end_date = datetime.fromisoformat(str(subscription.end_date))
+#                 current_date = datetime.now()
+#                 remaining_days = (end_date.date() - current_date.date()).days
+#                 registered_list = {'subscription_id': subscription.id,
+#                                    'subscription_stripe_payment_id': subscription.stripe_payment_id,
+#                                    'subscription_stripe_customer_id': subscription.stripe_customer_id,
+#                                    'device_name': subscription.device_id.device_name,
+#                                    'device_serial_no': subscription.device_id.device_serial_no,
+#                                    'is_subscription_active': subscription.status,
+#                                    'subscription_start_date': subscription.start_date,
+#                                    'subscription_end_date': subscription.end_date,
+#                                    'duration': remaining_days}
+#                 final_list.append(registered_list)
+#             return Response(final_list, status=status.HTTP_200_OK)
+#         except Exception as e:
+#             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def previous_connected_list(request):
+    """User Connected Device list"""
     if request.method == 'GET':
         try:
             user_id = get_member_id(request)
-            subscriptions = Subscription.objects.filter(user_id=user_id, status=1)
+            subscriptions = Subscription.objects.filter(user_id=user_id, app_subscribed=True, status=1)
+            device_data = UserDevice.objects.filter(user_id=user_id)
             final_list = []
-            for subscription in subscriptions:
-                # This to show the remain days for subscription period to end.
-                end_date = datetime.fromisoformat(str(subscription.end_date))
-                current_date = datetime.now()
-                remaining_days = (end_date.date() - current_date.date()).days
-                registered_list = {'subscription_id': subscription.id,
-                                   'subscription_stripe_payment_id': subscription.stripe_payment_id,
-                                   'subscription_stripe_customer_id': subscription.stripe_customer_id,
-                                   'device_name': subscription.device_id.device_name,
-                                   'device_serial_no': subscription.device_id.device_serial_no,
-                                   'is_subscription_active': subscription.status,
-                                   'subscription_start_date': subscription.start_date,
-                                   'subscription_end_date': subscription.end_date,
-                                   'duration': remaining_days}
-                final_list.append(registered_list)
+            for device in device_data:
+                # Member Connected Device List
+                device_list = {
+                    'user_id': device.user_id.pk,
+                    'device_name': device.device_id.device_name,
+                    'device_serial_no': device.device_id.device_serial_no
+                }
+                final_list.append(device_list)
             return Response(final_list, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'Error Occurred': str(e)}, status=status.HTTP_400_BAD_REQUEST)

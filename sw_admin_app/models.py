@@ -144,3 +144,7 @@ class SubscriptionPrice(models.Model):  # AppPrice update
 
     def __str__(self):
         return str(self.price)
+
+
+class Test(models.Model):
+    Test = models.BooleanField(default=False)

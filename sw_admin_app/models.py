@@ -24,7 +24,8 @@ class BillingAddress(models.Model):
 class Device(models.Model):
     device_serial_no = models.CharField(max_length=256)
     device_name = models.CharField(max_length=256, blank=True, null=True, default=None)
-    price_id = models.CharField(max_length=256, blank=True, null=True, default=None)  # price id for subscription
+    device_price_id = models.CharField(max_length=256, blank=True, null=True, default=None)  # price id for subscription
+    # price_id = models.CharField(max_length=256, blank=True, null=True, default=None)  # price id for subscription
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -74,7 +75,7 @@ class PaymentMethod(models.Model):
 class Subscription(models.Model):
     status = models.PositiveIntegerField(choices=((0, "InActive"), (1, "Active"), (2, "Cancelled")), default=0)
     device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True)  # Not used.
-    app_subscribed = models.BooleanField(default=False)  # Newly add for app subscription..
+    # app_subscribed = models.BooleanField(default=False)  # Newly add for app subscription..
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     payment_method_id = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True)
     stripe_payment_id = models.CharField(max_length=256, blank=True, null=True, default=None)
@@ -117,8 +118,8 @@ class UserProfile(models.Model):
 class UserDevice(models.Model):
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, blank=True,
                                 related_name="user_device")
-    device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, default=None, null=True, blank=True,
-                                  related_name="device")
+    # device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, default=None, null=True, blank=True,
+    #                               related_name="device")
     mobile_device_id = models.CharField(max_length=256, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -146,5 +147,5 @@ class SubscriptionPrice(models.Model):  # AppPrice update
         return str(self.price)
 
 
-class Test(models.Model):
-    Test = models.BooleanField(default=False)
+# class Test(models.Model):
+#     Test = models.BooleanField(default=False)

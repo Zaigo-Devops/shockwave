@@ -206,7 +206,7 @@ def is_device_registration(request):
     For Each user Need to check whether the App subscribed or not
     """
     if request.method == 'POST':
-        try:
+        # try:
             user_id = get_member_id(request)
             subscription = Subscription.objects.filter(user_id=user_id,
                                                        app_subscribed=True, status=1).first()
@@ -230,9 +230,9 @@ def is_device_registration(request):
                                  # subscription_end_date This used for offline api,when the subscription is end for
                                  # user.
                                  "subscription_end_date": subscription.end_date if subscription else None}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"is_subscribed": False, "message": "From Exception", "error": "From Exception"},
-                            status=status.HTTP_200_OK)
+        # except Exception as e:
+        #     return Response({"is_subscribed": False, "message": str(e), "error": str(e)},
+        #                     status=status.HTTP_200_OK)
 
 
 class TriggerOtp(APIView):

@@ -219,11 +219,17 @@ def is_device_registration(request):
                     duration = end_date - start_date
                     return Response({"is_subscribed": True,
                                      "device_price": app_price.price,
-                                     "duration": duration.days}, status=status.HTTP_200_OK)
+                                     "duration": duration.days,
+                                     # subscription_end_date This used for offline api,when the subscription is end
+                                     # for user.
+                                     "subscription_end_date": subscription.end_date}, status=status.HTTP_200_OK)
             else:
                 return Response({"is_subscribed": False,
                                  "device_price": app_price.price,
-                                 "duration": duration}, status=status.HTTP_200_OK)
+                                 "duration": duration,
+                                 # subscription_end_date This used for offline api,when the subscription is end for
+                                 # user.
+                                 "subscription_end_date": subscription.end_date if subscription else None}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"is_subscribed": False, "message": "From Exception", "error": "From Exception"},
                             status=status.HTTP_200_OK)
@@ -846,11 +852,13 @@ def device_session_data_history(request):
         #     device_id_list = [subscription.device_id]
         # if subscription_qs.exists():
         sub_device = SessionData.objects.filter(session_id__id=session_id).order_by('created_at')
-        if start_date and end_date:
-            sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
-        session_data = get_session_data(sub_device, session_id, time_zone)
-
-        return Response(session_data, status.HTTP_200_OK)
+        if sub_device:
+            if start_date and end_date:
+                sub_device = sub_device.filter(created_at__range=(start_date, end_date)).order_by('created_at')
+            session_data = get_session_data(sub_device, session_id, time_zone)
+            return Response(session_data, status.HTTP_200_OK)
+        else:
+            return Response({"msg": "Session Id Does Not Exists, Please provide Valid Session Id"}, status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1716,13 +1724,21 @@ def offline_session_sessiondata_save(request):
         pin_code = address_fetch['postcode']
         country = address_fetch['country']
         session_data = None
-        device_id = Device.objects.filter(device_serial_no=device_serial_no).first()
-
+        user_id = get_member_id(request)
+        # device_id = Device.objects.filter(device_serial_no=device_serial_no).first()
+        is_device_exists = Device.objects.filter(device_serial_no=device_serial_no).first()
+        if is_device_exists:
+            device_serial_no = is_device_exists
+        else:
+            device_serial_no = Device.objects.create(device_serial_no=device_serial_no, device_name=device_serial_no)
+        if device_serial_no:
+            user_device = UserDevice.objects.filter(device_id=device_serial_no, user_id_id=user_id).exists()
+            if not user_device:
+                UserDevice.objects.create(device_id=device_serial_no, user_id_id=user_id)
         try:
             start_datetime = datetime.strptime(start_date_time[:-1], "%Y-%m-%d %H:%M:%S.%f")
             end_datetime = datetime.strptime(end_date_time[:-1], "%Y-%m-%d %H:%M:%S.%f")
-            user_id = get_member_id(request)
-            session_create = Session.objects.create(environment=environment, device_id=device_id,
+            session_create = Session.objects.create(environment=environment, device_id=device_serial_no,
                                                     user_id_id=user_id, location=location, city=city,
                                                     state=state, country=country,
                                                     pin_code=pin_code, latitude=latitude, session_end_date=end_datetime,
@@ -1740,7 +1756,7 @@ def offline_session_sessiondata_save(request):
                                                               lowest_energy_level=low_energy_level,
                                                               highest_energy_level=highest_energy_level,
                                                               session_id=session_create,
-                                                              device_id=device_id, user_id_id=user_id)
+                                                              device_id=device_serial_no, user_id_id=user_id)
                     session_data.created_at = date_time
                     session_data.save()
 

@@ -76,7 +76,7 @@ class PaymentMethod(models.Model):
 class Subscription(models.Model):
     status = models.PositiveIntegerField(choices=((0, "InActive"), (1, "Active"), (2, "Cancelled")), default=0)
     device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True)  # Not used.
-    app_subscribed = models.BooleanField(default=False)  # Newly add for app subscription..
+    app_subscribed = models.BooleanField(default=False)  # Newly add for app subscription validation.
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     payment_method_id = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True)
     stripe_payment_id = models.CharField(max_length=256, blank=True, null=True, default=None)
@@ -120,7 +120,7 @@ class UserDevice(models.Model):
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, blank=True,
                                 related_name="user_device")
     device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, default=None, null=True, blank=True,
-                                  related_name="device")
+                                  related_name="device") # Field add for mapped device against the user
     mobile_device_id = models.CharField(max_length=256, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -139,7 +139,7 @@ class SubscriptionPeriod(models.Model):
 """ Price update for app is Handled"""
 
 
-class SubscriptionPrice(models.Model):  # AppPrice update
+class SubscriptionPrice(models.Model):  # DevicePrice changed to SubscriptionPrice
     price = models.FloatField(default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

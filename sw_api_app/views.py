@@ -1381,43 +1381,43 @@ Device Activate is Not need now for device ,bcz They Unlock the device for all u
 """
 
 
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-# def activate_device(request):
-#     device_serial_no = request.data.get('device_serial_no', None)
-#     device_value = request.data.get('device_value', None)
-#     if not device_serial_no:
-#         return Response({"status": "failure", "error": "Device Serial Number is missing"}, status.HTTP_400_BAD_REQUEST)
-#     if not device_value:
-#         return Response({"status": "failure", "error": "Device Value is missing"}, status.HTTP_400_BAD_REQUEST)
-#     user_id = get_member_id(request)
-#     subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
-#                                                status=1).order_by(
-#         '-created_at').first()
-#     if not subscription:
-#         return Response({"status": "failure", "error": "Subscription is not exist/active"}, status.HTTP_400_BAD_REQUEST)
-#     end_date = subscription.end_date
-#     difference_in_days = (end_date - timezone.now()).days
-#     # difference_in_days = (datetime.date.today() - end_date).days
-#     if difference_in_days >= 0:
-#         # text_to_replaced = 1.5 * difference_in_days
-#         # hex_conversion = hex(int(text_to_replaced))[2:]
-#         # text_to_be_replaced = hex_conversion.zfill(2)
-#         text_to_be_replaced = "02"
-#         device_value_list = list(device_value)
-#         device_value_list[2] = text_to_be_replaced[0]
-#         device_value_list[3] = text_to_be_replaced[1]
-#         device_value = "".join(device_value_list)
-#         # print("Updated device value", device_value)
-#         hex_value = generate_hex_string(device_value)
-#         if not hex_value:
-#             return Response({"status": "failure", "error": "Unable to get the device code"},
-#                             status.HTTP_400_BAD_REQUEST)
-#         return Response({"status": "success", "message": "Device Activated", "updated_device_value": device_value,
-#                          "device_code": hex_value.upper()}, status.HTTP_200_OK)
-#     return Response(
-#         {"status": "failure", "error": f"Unable to get the response as subscription days left is {difference_in_days}"},
-#         status.HTTP_400_BAD_REQUEST)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def activate_device(request):
+    device_serial_no = request.data.get('device_serial_no', None)
+    device_value = request.data.get('device_value', None)
+    if not device_serial_no:
+        return Response({"status": "failure", "error": "Device Serial Number is missing"}, status.HTTP_400_BAD_REQUEST)
+    if not device_value:
+        return Response({"status": "failure", "error": "Device Value is missing"}, status.HTTP_400_BAD_REQUEST)
+    user_id = get_member_id(request)
+    subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
+                                               status=1).order_by(
+        '-created_at').first()
+    if not subscription:
+        return Response({"status": "failure", "error": "Subscription is not exist/active"}, status.HTTP_400_BAD_REQUEST)
+    end_date = subscription.end_date
+    difference_in_days = (end_date - timezone.now()).days
+    # difference_in_days = (datetime.date.today() - end_date).days
+    if difference_in_days >= 0:
+        # text_to_replaced = 1.5 * difference_in_days
+        # hex_conversion = hex(int(text_to_replaced))[2:]
+        # text_to_be_replaced = hex_conversion.zfill(2)
+        text_to_be_replaced = "02"
+        device_value_list = list(device_value)
+        device_value_list[2] = text_to_be_replaced[0]
+        device_value_list[3] = text_to_be_replaced[1]
+        device_value = "".join(device_value_list)
+        # print("Updated device value", device_value)
+        hex_value = generate_hex_string(device_value)
+        if not hex_value:
+            return Response({"status": "failure", "error": "Unable to get the device code"},
+                            status.HTTP_400_BAD_REQUEST)
+        return Response({"status": "success", "message": "Device Activated", "updated_device_value": device_value,
+                         "device_code": hex_value.upper()}, status.HTTP_200_OK)
+    return Response(
+        {"status": "failure", "error": f"Unable to get the response as subscription days left is {difference_in_days}"},
+        status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])

@@ -1405,8 +1405,10 @@ def activate_device(request):
     text_to_be_replaced = hex_conversion.zfill(2)
     # text_to_be_replaced = "02"
     device_value_list = list(device_value)
-    device_value_list[2] = "27" #text_to_be_replaced[0]
-    device_value_list[3] = "10" #text_to_be_replaced[1]
+    device_value_list[2] = "2" #text_to_be_replaced[0] 2710
+    device_value_list[3] = "7" #text_to_be_replaced[1]
+    device_value_list[4] = "1" #text_to_be_replaced[1]
+    device_value_list[5] = "0" #text_to_be_replaced[1]
     device_value = "".join(device_value_list)
     # print("Updated device value", device_value)
     hex_value = generate_hex_string(device_value)

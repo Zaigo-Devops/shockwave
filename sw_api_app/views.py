@@ -969,8 +969,9 @@ def payment_method_creation(request):
                                                                  card_last4_no=card_last4_number,
                                                                  user_id_id=user_id)
             if billing_address:
-                address_format = f"{line1} {line2} {city} {state} {postal_code}"
-                address_format = address_format.strip()
+                formatted_address = ", ".join(part for part in [line1, line2, city, state, postal_code] if part)
+                # address_format = f"{line1} {line2} {city} {state} {postal_code}"
+                address_format = formatted_address.strip()
                 user_address = UserProfile.objects.filter(user_id=user_id).update(user_address=address_format)
             return Response(
                 {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id,

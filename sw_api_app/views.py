@@ -553,9 +553,9 @@ def cancel_registration(request):
                 delete_subscription(subscription.stripe_subscription_id)
                 subscription.status = 0
                 subscription.save()
-                return Response({'message': 'Subscription Cancelled !!!'}, status=status.HTTP_200_OK)
+                return Response({'message': 'Subscription Cancelled'}, status=status.HTTP_200_OK)
             else:
-                return Response({'message': 'Invalid ID Provided'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'message': 'No Subscription against user'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error_message": str(e)},
                             status=status.HTTP_400_BAD_REQUEST)

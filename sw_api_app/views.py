@@ -844,9 +844,10 @@ def device_session_data_history(request):
             return Response("please provide End_date")
         if not start_date and end_date:
             return Response("please provide Start_date")
-        from_date = timezone.datetime.strptime(start_date, "%Y-%m-%d")
-        to_date = end_date + timedelta(hours=23, minutes=59)
-        date_range= (from_date, to_date)
+        # from_date = timezone.datetime.strptime(start_date, "%Y-%m-%d")
+        # to_date = end_date + timedelta(hours=23, minutes=59)
+        # date_range= (from_date, to_date)
+        date_range= (start_date, end_date)
         # subscription_qs = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
         #                                               status=1)
         # subscription = subscription_qs.order_by('-created_at').first()

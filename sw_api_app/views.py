@@ -1756,7 +1756,7 @@ def offline_session_sessiondata_save(request):
                     highest_energy_level = energy['highest_energy_level']
                     date_time_format = energy['date_time']
                     date_time = parse_datetime(date_time_format[:-1])  # Use Django's parse_datetime instead
-                    low_energy_level = energy['low_energy_level'] if energy['low_energy_level'] else None
+                    low_energy_level = energy['low_energy_level'] if energy['low_energy_level'] else 0.0
                     session_data = SessionData.objects.create(energy_data=energy,
                                                               lowest_energy_level=low_energy_level,
                                                               highest_energy_level=highest_energy_level,

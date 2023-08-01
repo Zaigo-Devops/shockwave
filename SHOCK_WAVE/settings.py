@@ -107,7 +107,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
-CSRF_TRUSTED_ORIGINS = ['https://shockwave.zaicrm.com']
+CSRF_TRUSTED_ORIGINS = ['https://shockwave.zaicrm.com', 'https://shockalert.eastus.cloudapp.azure.com']
 CORS_ORIGIN_ALLOW_ALL = True
 
 SIMPLE_JWT = {

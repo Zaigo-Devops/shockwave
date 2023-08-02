@@ -1396,12 +1396,12 @@ def activate_device(request):
     if not device_value:
         return Response({"status": "failure", "error": "Device Value is missing"}, status.HTTP_400_BAD_REQUEST)
     user_id = get_member_id(request)
-    subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
-                                               status=1).order_by(
-        '-created_at').first()
-    if not subscription:
-        return Response({"status": "failure", "error": "Subscription is not exist/active"}, status.HTTP_400_BAD_REQUEST)
-    end_date = subscription.end_date
+    # subscription = Subscription.objects.filter(device_id__device_serial_no=device_serial_no, user_id=user_id,
+    #                                            status=1).order_by(
+    #     '-created_at').first()
+    # if not subscription:
+    #     return Response({"status": "failure", "error": "Subscription is not exist/active"}, status.HTTP_400_BAD_REQUEST)
+    # end_date = subscription.end_date
     # difference_in_days = (end_date - timezone.now()).days
     # difference_in_days = (datetime.date.today() - end_date).days
     # if difference_in_days >= 0:

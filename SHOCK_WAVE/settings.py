@@ -62,7 +62,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'SHOCK_WAVE.urls'
-
+DATA_UPLOAD_MAX_MEMORY_SIZE = 500000000
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

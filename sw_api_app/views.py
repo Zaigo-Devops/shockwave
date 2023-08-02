@@ -1405,7 +1405,7 @@ def activate_device(request):
     # difference_in_days = (end_date - timezone.now()).days
     # difference_in_days = (datetime.date.today() - end_date).days
     # if difference_in_days >= 0:
-    text_to_replaced = 1.5 * 10000
+    text_to_replaced = 1.5 * 1000000
     hex_conversion = hex(int(text_to_replaced))[2:]
     text_to_be_replaced = hex_conversion.zfill(2)
     # text_to_be_replaced = "02"

@@ -350,13 +350,12 @@ class UserView(APIView):
         return Response(user_details, status.HTTP_200_OK)
 
     def patch(self, request):
-        # print("request", request)
-        member_id = get_member_id(request)
-        user = User.objects.get(pk=member_id)
-        user_detail = UserDetailSerializer(instance=user, data=request.data, many=False, partial=True)
-        user_detail.is_valid(raise_exception=True)
-        user_detail.save()
-        if user_detail:
+        try:
+            member_id = get_member_id(request)
+            user = User.objects.get(pk=member_id)
+            user_detail = UserDetailSerializer(instance=user, data=request.data, many=False, partial=True)
+            user_detail.is_valid(raise_exception=True)
+            user_detail.save()
 
             if hasattr(user, 'user_profile'):
                 user_profile = UserProfileSerializer(instance=user.user_profile, data=request.data, many=False,
@@ -364,7 +363,9 @@ class UserView(APIView):
                 user_profile.is_valid(raise_exception=True)
                 user_profile.save()
             return Response(user_detail.data, status=status.HTTP_200_OK)  # Return validated data
-        return Response({"error": "Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": "Something went wrong",
+                             "msg": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class BillingAddressViewSet(viewsets.ModelViewSet):

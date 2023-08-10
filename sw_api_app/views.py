@@ -355,7 +355,6 @@ class UserView(APIView):
         user = User.objects.get(pk=member_id)
         user_detail = UserDetailSerializer(instance=user, data=request.data, many=False, partial=True)
         user_detail.is_valid(raise_exception=True)
-        print("user_detail", user_detail.data)
         user_detail.save()
 
         if hasattr(user, 'user_profile'):

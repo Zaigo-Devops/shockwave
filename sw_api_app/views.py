@@ -350,9 +350,11 @@ class UserView(APIView):
         return Response(user_details, status.HTTP_200_OK)
 
     def patch(self, request):
+        print("request", request)
         member_id = get_member_id(request)
         user = User.objects.get(pk=member_id)
         user_detail = UserDetailSerializer(instance=user, data=request.data, many=False, partial=True)
+        print("user_detail", user_detail.data)
         user_detail.is_valid(raise_exception=True)
         user_detail.save()
         if hasattr(user, 'user_profile'):

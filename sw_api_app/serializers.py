@@ -40,9 +40,11 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         user_image = UserProfile.objects.filter(user_id=instance.id).get()
         response = super(UserDetailSerializer, self).to_representation(instance)
+        print('response1', response)
         if user_image:
             user_profile = f"{settings.MY_DOMAIN}/media/{user_image.user_profile_image}".replace("//media", "/media")
             response['user_profile_image'] = user_profile
+            print('response2', response)
         return response
 
 

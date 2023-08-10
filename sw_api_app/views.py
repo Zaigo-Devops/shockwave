@@ -350,22 +350,33 @@ class UserView(APIView):
         return Response(user_details, status.HTTP_200_OK)
 
     def patch(self, request):
-        try:
-            member_id = get_member_id(request)
-            user = User.objects.get(pk=member_id)
-            user_detail = UserDetailSerializer(instance=user, data=request.data, many=False, partial=True)
-            user_detail.is_valid(raise_exception=True)
-            user_detail.save()
+        member_id = get_member_id(request)
+        user = User.objects.get(pk=member_id)
+        user_detail = UserDetailSerializer(instance=user, data=request.data, many=False, partial=True)
+        user_detail.is_valid(raise_exception=False)
+        error_message = {}
+        for key, value in user_detail.errors.items():
+            error_message["msg"] = value[0].title()
+            error_message["error"] = value[0].title()
+            error_message["message"] = value[0].title()
+            break
+        if error_message:
+            return Response(error_message, status.HTTP_400_BAD_REQUEST)
+        user_detail.save()
 
-            if hasattr(user, 'user_profile'):
-                user_profile = UserProfileSerializer(instance=user.user_profile, data=request.data, many=False,
-                                                     partial=True)
-                user_profile.is_valid(raise_exception=True)
-                user_profile.save()
-            return Response(user_detail.data, status=status.HTTP_200_OK)  # Return validated data
-        except Exception as e:
-            return Response({"error": "Something went wrong",
-                             "msg": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        if hasattr(user, 'user_profile'):
+            user_profile = UserProfileSerializer(instance=user.user_profile, data=request.data, many=False,
+                                                 partial=True)
+            user_profile.is_valid(raise_exception=False)
+            for key, value in user_profile.errors.items():
+                error_message["msg"] = value[0].title()
+                error_message["error"] = value[0].title()
+                error_message["message"] = value[0].title()
+                break
+            if error_message:
+                return Response(error_message, status.HTTP_400_BAD_REQUEST)
+            user_profile.save()
+        return Response(user_detail.data, status=status.HTTP_200_OK)  # Return validated data
 
 
 class BillingAddressViewSet(viewsets.ModelViewSet):

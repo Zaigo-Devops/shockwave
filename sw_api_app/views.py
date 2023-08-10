@@ -362,7 +362,8 @@ class UserView(APIView):
                                                  partial=True)
             user_profile.is_valid(raise_exception=True)
             user_profile.save()
-        return Response(user_detail.data, status=status.HTTP_200_OK)
+        return Response(user_detail.validated_data, status=status.HTTP_200_OK)  # Return validated data
+        # return Response(user_detail.data, status=status.HTTP_200_OK)
 
 
 class BillingAddressViewSet(viewsets.ModelViewSet):

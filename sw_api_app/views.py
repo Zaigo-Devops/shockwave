@@ -918,7 +918,7 @@ def pdf_generate(sub_device, time_zone):
             location = initial_session_data.session_id.location
             device_name = initial_session_data.device_id.device_name
             session_id = initial_session_data.session_id.pk
-            environment = initial_session_data.session_id.environment
+            environment = initial_session_data.session_id.environment.capitalize()
         else:
             location = device_name = session_id = environment = "-"
         context = {'datas': data_list,

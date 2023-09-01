@@ -1860,7 +1860,7 @@ def active_subscription(request):
     try:
         if request.method == "POST":
             payment_method_id = request.data.get('payment_method_id')
-            card_last4_number = request.data.get('card_last4_number')
+            card_last4_number = request.data.get('card_last4_number', 0)
             stripe_response = request.date.get('stripe_response')
             user_id = get_member_id(request)
             try:
@@ -1878,10 +1878,10 @@ def active_subscription(request):
                 if payment_method_id:
                     payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
                         '-created_at').first()
-                else:
-                    payment_method = PaymentMethod.objects.create(payment_id=payment_method_id,
-                                                                  card_last4_no=card_last4_number,
-                                                                  user_id_id=user_id)
+                    if not payment_method:
+                        payment_method = PaymentMethod.objects.create(payment_id=payment_method_id,
+                                                                      card_last4_no=card_last4_number,
+                                                                      user_id_id=user_id)
 
                 if stripe_customer_id and payment_method:
                     attached = attach_payment_method(stripe_customer_id, payment_method.payment_id)

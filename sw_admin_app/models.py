@@ -86,8 +86,8 @@ class Subscription(models.Model):
     stripe_price_id = models.CharField(max_length=256, blank=True, null=True, default=None)
     stripe_intent_id = models.CharField(max_length=256, blank=True, null=True, default=None)
     subscription_price = models.FloatField(default=0, null=True)
-    start_date = models.DateTimeField()
-    end_date = models.DateTimeField()
+    start_date = models.DateTimeField(blank=True, null=True)
+    end_date = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

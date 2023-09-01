@@ -184,3 +184,26 @@ def delete_subscription(subscription_id):
 def delete_stripe_payment_method(stripe_payment_id):
     delete = stripe.PaymentMethod.detach(stripe_payment_id)
     return delete
+
+
+def create_subscription_post_payment_intent(customer_id, payment_intent_id, price_id):
+    # def create_subscription(customer_id, price_id):
+    subscription = stripe.Subscription.create(
+        customer=customer_id,
+        items=[
+            {
+                "price": price_id,
+            },
+        ],
+        # payment_behavior='default_incomplete',
+        # collection_method="charge_automatically",
+        default_payment_method=payment_intent_id,
+        expand=["latest_invoice.payment_intent"],
+        # customer_action='use_payment_method',
+        # payment_settings={
+        #     "payment_method_options": {
+        #         "payment_intent": payment_intent_id
+        #     }
+        # }
+    )
+    return subscription

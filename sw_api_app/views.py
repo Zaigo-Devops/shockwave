@@ -18,7 +18,7 @@ from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializ
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
     create_address, create_product, create_price, create_subscription, delete_stripe_payment_method, \
-    stripe_ephemeral_key
+    stripe_ephemeral_key, create_subscription_post_payment_intent
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
     get_recuring_periods, \
     unix_timestamp_format, INACTIVE, get_address, ACTIVE
@@ -96,7 +96,8 @@ class RegisterUserAPIView(generics.CreateAPIView):
         token_items['payment_method_count'] = payment_method
         token_items['session_count'] = session_count
         token_items['stripe_customer_id'] = user.user_profile.stripe_customer_id
-        token_items['stripe_ephemeral_key'] = user.user_profile.stripe_ephemeral_key if user.user_profile.stripe_ephemeral_key else None
+        token_items[
+            'stripe_ephemeral_key'] = user.user_profile.stripe_ephemeral_key if user.user_profile.stripe_ephemeral_key else None
         response = token_items
         return Response(response)
 
@@ -961,47 +962,46 @@ def pdf_generate(sub_device, time_zone):
 def payment_method_creation(request):
     if request.method == 'POST':
         try:
-            card_type = request.data.get('card_type', None)
-            card_number = request.data.get('card_number', None)
-            card_exp_month = request.data.get('card_exp_month', None)
-            card_exp_year = request.data.get('card_exp_year', None)
-            card_cvc = request.data.get('card_cvc', None)
+            # card_type = request.data.get('card_type', None)
+            # card_number = request.data.get('card_number', None)
+            # card_exp_month = request.data.get('card_exp_month', None)
+            # card_exp_year = request.data.get('card_exp_year', None)
+            # card_cvc = request.data.get('card_cvc', None)
             name = request.data.get('name', None)
-            email = request.data.get('email', None)
+            # email = request.data.get('email', None)
             line1 = request.data.get('line1', None)
-            line2 = request.data.get('line2', None)
+            # line2 = request.data.get('line2', None)
             city = request.data.get('city', None)
             state = request.data.get('state', None)
             postal_code = request.data.get('postal_code', None)
             country = request.data.get('country', None)
-            address = create_address(line1, line2, city, state, postal_code, country)
+            address = create_address(line1, None, city, state, postal_code, country)
             user_id = get_member_id(request)
             user = User.objects.get(pk=user_id)
             user_profile = UserProfile.objects.get(user_id=user_id)
             stripe_customer_id = user_profile.stripe_customer_id
-            created_payment_method_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year,
-                                                              card_cvc,
-                                                              name, email, address)
-            card_last4_number = created_payment_method_id['card']['last4']
-            attached = attach_payment_method(stripe_customer_id, created_payment_method_id['id'])
-            customer_update = stripe.Customer.modify(stripe_customer_id,
-                                                     invoice_settings={
-                                                         'default_payment_method': created_payment_method_id['id']})
-            billing_address = BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=line2,
+            # created_payment_method_id = create_payment_method(card_type, card_number, card_exp_month, card_exp_year,
+            #                                                   card_cvc,
+            #                                                   name, email, address)
+            # card_last4_number = created_payment_method_id['card']['last4']
+            # attached = attach_payment_method(stripe_customer_id, created_payment_method_id['id'])
+            # customer_update = stripe.Customer.modify(stripe_customer_id,
+            #                                          invoice_settings={
+            #                                              'default_payment_method': created_payment_method_id['id']})
+            billing_address = BillingAddress.objects.create(name=name, user_id_id=user_id, line_1=line1, line_2=None,
                                                             city=city,
                                                             state=state, country=country, pin_code=postal_code)
-            if attached:
-                payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id['id'],
-                                                                 card_last4_no=card_last4_number,
-                                                                 user_id_id=user_id)
+            # if attached:
+            #     payment_method_id = PaymentMethod.objects.create(payment_id=created_payment_method_id['id'],
+            #                                                      card_last4_no=card_last4_number,
+            #                                                      user_id_id=user_id)
             if billing_address:
-                formatted_address = ", ".join(part for part in [line1, line2, city, state, postal_code] if part)
+                formatted_address = ", ".join(part for part in [line1, city, state, postal_code] if part)
                 # address_format = f"{line1} {line2} {city} {state} {postal_code}"
                 address_format = formatted_address.strip()
                 user_address = UserProfile.objects.filter(user_id=user_id).update(user_address=address_format)
             return Response(
-                {'detail': 'Payment method created successfully', 'payment_method_id': payment_method_id.id,
-                 "card_last4_number": card_last4_number},
+                {'detail': 'Billing details added successfully'},
                 status=status.HTTP_200_OK)
         except Exception as e:
             error_msg = str(e)
@@ -1831,6 +1831,7 @@ def subscription_payment_intent(request):
                         )
                         stripe_intent_id = stripe_intent['id']
                         stripe_client_secret_id = stripe_intent['client_secret']
+                        print("stripe payment intent", stripe_intent)
                     except Exception as e:
                         stripe_intent_id = None
                         stripe_client_secret_id = None
@@ -1855,7 +1856,8 @@ def subscription_payment_intent(request):
                                      "ephemeral_key": ephemeral_key,
                                      "customer_id": stripe_customer_id,
                                      "stripe_client_secret": stripe_client_secret_id,
-                                     "message": "Payment Intent created successfully"}, status=status.HTTP_200_OK)
+                                     "message": "Payment Intent created successfully",
+                                     "payment_intent_message": exception_message}, status=status.HTTP_200_OK)
                 return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
             else:
                 return Response({"message": "This App is already Subscribed"}, status=status.HTTP_200_OK)
@@ -1940,3 +1942,17 @@ def active_subscription(request):
             error_msg = split_error_msg[1].strip()
         return Response({"status": "failure", "error": error_msg, "message": error_msg},
                         status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def activate_subscription(request):
+    payment_intent_id = request.data.get("payment_intent_id", None)
+    subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by('-created_at').first()
+    if subscription:
+        customer_id = subscription.stripe_customer_id
+        try:
+            create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
+        except Exception as e:
+            print("stripe subscription status error exception message", str(e))
+    return Response()

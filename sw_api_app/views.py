@@ -207,32 +207,33 @@ def is_device_registration(request):
     """
     if request.method == 'POST':
         # try:
-            user_id = get_member_id(request)
-            subscription = Subscription.objects.filter(user_id=user_id,
-                                                       app_subscribed=True, status=1).first()
-            app_price = SubscriptionPrice.objects.get()
-            duration = '30'
-            if subscription:
-                if subscription.status == 1:
-                    start_date = subscription.start_date
-                    end_date = subscription.end_date
-                    duration = end_date - start_date
-                    return Response({"is_subscribed": True,
-                                     "device_price": app_price.price,
-                                     "duration": duration.days,
-                                     # subscription_end_date This used for offline api,when the subscription is end
-                                     # for user.
-                                     "subscription_end_date": subscription.end_date}, status=status.HTTP_200_OK)
-            else:
-                return Response({"is_subscribed": False,
+        user_id = get_member_id(request)
+        subscription = Subscription.objects.filter(user_id=user_id,
+                                                   app_subscribed=True, status=1).first()
+        app_price = SubscriptionPrice.objects.get()
+        duration = '30'
+        if subscription:
+            if subscription.status == 1:
+                start_date = subscription.start_date
+                end_date = subscription.end_date
+                duration = end_date - start_date
+                return Response({"is_subscribed": True,
                                  "device_price": app_price.price,
-                                 "duration": duration,
-                                 # subscription_end_date This used for offline api,when the subscription is end for
-                                 # user.
-                                 "subscription_end_date": subscription.end_date if subscription else None}, status=status.HTTP_200_OK)
-        # except Exception as e:
-        #     return Response({"is_subscribed": False, "message": str(e), "error": str(e)},
-        #                     status=status.HTTP_200_OK)
+                                 "duration": duration.days,
+                                 # subscription_end_date This used for offline api,when the subscription is end
+                                 # for user.
+                                 "subscription_end_date": subscription.end_date}, status=status.HTTP_200_OK)
+        else:
+            return Response({"is_subscribed": False,
+                             "device_price": app_price.price,
+                             "duration": duration,
+                             # subscription_end_date This used for offline api,when the subscription is end for
+                             # user.
+                             "subscription_end_date": subscription.end_date if subscription else None},
+                            status=status.HTTP_200_OK)
+    # except Exception as e:
+    #     return Response({"is_subscribed": False, "message": str(e), "error": str(e)},
+    #                     status=status.HTTP_200_OK)
 
 
 class TriggerOtp(APIView):
@@ -333,7 +334,7 @@ class OtpVerified(APIView):
                                     status=status.HTTP_422_UNPROCESSABLE_ENTITY)
             else:
                 return Response({'error': 'Email does not exists, please provide valid email'},
-                                status=status.HTTP_422_UNPROCESSABLE_ENTITY) -m
+                                status=status.HTTP_422_UNPROCESSABLE_ENTITY) - m
         except Exception as e:
             return Response({'error': 'Please provide valid email information', "msg": str(e)},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -863,7 +864,7 @@ def device_session_data_history(request):
         # from_date = timezone.datetime.strptime(start_date, "%Y-%m-%d")
         # to_date = end_date + timedelta(hours=23, minutes=59)
         # date_range= (from_date, to_date)
-        date_range= (start_date, end_date)
+        date_range = (start_date, end_date)
         # subscription_qs = Subscription.objects.filter(user_id=user_id, device_id__device_serial_no=device_serial_no,
         #                                               status=1)
         # subscription = subscription_qs.order_by('-created_at').first()
@@ -878,7 +879,8 @@ def device_session_data_history(request):
             session_data = get_session_data(sub_device, session_id, time_zone)
             return Response(session_data, status.HTTP_200_OK)
         else:
-            return Response({"msg": "Session Id Does Not Exists, Please provide Valid Session Id"}, status.HTTP_400_BAD_REQUEST)
+            return Response({"msg": "Session Id Does Not Exists, Please provide Valid Session Id"},
+                            status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1148,8 +1150,8 @@ def payment_method_initialized(request):
                 if payment_method_id:
                     payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
                         '-created_at').first()
-                else:
-                    payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
+                    if not payment_method:
+                        payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
                 stripe_payment_id = payment_method.payment_id
                 if stripe_customer_id:
                     stripe_product_id = create_product(product_name=user_unique_indentifer,
@@ -1426,10 +1428,10 @@ def activate_device(request):
     text_to_be_replaced = hex_conversion.zfill(2)
     # text_to_be_replaced = "02"
     device_value_list = list(device_value)
-    device_value_list[2] = "2" #text_to_be_replaced[0] 2710
-    device_value_list[3] = "7" #text_to_be_replaced[1]
-    device_value_list[4] = "1" #text_to_be_replaced[1]
-    device_value_list[5] = "0" #text_to_be_replaced[1]
+    device_value_list[2] = "2"  # text_to_be_replaced[0] 2710
+    device_value_list[3] = "7"  # text_to_be_replaced[1]
+    device_value_list[4] = "1"  # text_to_be_replaced[1]
+    device_value_list[5] = "0"  # text_to_be_replaced[1]
     device_value = "".join(device_value_list)
     # print("Updated device value", device_value)
     hex_value = generate_hex_string(device_value)
@@ -1438,7 +1440,6 @@ def activate_device(request):
                         status.HTTP_400_BAD_REQUEST)
     return Response({"status": "success", "message": "Device Activated", "updated_device_value": device_value,
                      "device_code": hex_value.upper()}, status.HTTP_200_OK)
-
 
 
 @api_view(['GET'])
@@ -1785,3 +1786,140 @@ def offline_session_sessiondata_save(request):
 
         except ValueError as e:
             return Response({"error": str(e)}, status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def subscription_payment_intent(request):
+    """
+    Subscription  for a APP --- Recurring Payment
+    """
+    try:
+        if request.method == "POST":
+            user_id = get_member_id(request)
+            try:
+                user = User.objects.get(pk=user_id)
+                user_profile = UserProfile.objects.get(user_id=user_id)
+            except:
+                return Response({'msg': "User or User Profile Does Not Exists"}, status.HTTP_400_BAD_REQUEST)
+            stripe_customer_id = user_profile.stripe_customer_id
+            user_unique_indentifer = f'{user.first_name}-{user.email}'  # For product create against the user
+            # check whether app is subscribed or not
+            is_app_subscribed = Subscription.objects.filter(user_id=user_id,
+                                                            app_subscribed=True,
+                                                            status=1).exists()
+            if not is_app_subscribed:
+                if stripe_customer_id:
+                    stripe_product_id = create_product(product_name=user_unique_indentifer,
+                                                       description=f'For {user.first_name},unique identifier {user_unique_indentifer}  is '
+                                                                   f'registered for App.')['id']
+                    app_price = app_price_update()
+                    stripe_product_price_id = \
+                        create_price(amount=app_price, currency='usd', interval='day', interval_count=30,
+                                     product_id=stripe_product_id)['id']
+                    stripe_intent = stripe.PaymentIntent.create(
+                        amount=app_price,
+                        currency="usd",
+                        automatic_payment_methods={"enabled": True},
+                        customer=stripe_customer_id
+                    )
+                    stripe_intent_id = stripe_intent['id']
+
+                    subscription = Subscription.objects.create(status=INACTIVE, user_id=user,
+                                                               app_subscribed=False,
+                                                               # stripe_subscription_id=stripe_Subscription_id['id'],
+                                                               stripe_customer_id=stripe_customer_id,
+                                                               stripe_price_id=stripe_product_price_id,
+                                                               stripe_product_id=stripe_product_id,
+                                                               stripe_intent_id=stripe_intent_id,
+                                                               subscription_price=app_price_update(
+                                                                   actual_price=True),
+                                                               # start_date=start_date,
+                                                               # end_date=end_date
+                                                               )
+                    return Response({"stripe_payment_intent_id": stripe_intent_id,
+                                     "message": "Payment Intent created successfully"}, status=status.HTTP_200_OK)
+                return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"message": "This App is already Subscribed"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        error_msg = str(e)
+        split_error_msg = str(e).split(":")
+        if len(split_error_msg) > 1:
+            error_msg = split_error_msg[1].strip()
+        return Response({"status": "failure", "error": error_msg, "message": error_msg},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def active_subscription(request):
+    """
+    Subscription Activate for a APP --- Recurring Payment
+    """
+    try:
+        if request.method == "POST":
+            payment_method_id = request.data.get('payment_method_id')
+            card_last4_number = request.data.get('card_last4_number')
+            stripe_response = request.date.get('stripe_response')
+            user_id = get_member_id(request)
+            try:
+                user = User.objects.get(pk=user_id)
+                user_profile = UserProfile.objects.get(user_id=user_id)
+            except:
+                return Response({'msg': "User or User Profile Does Not Exists"}, status.HTTP_400_BAD_REQUEST)
+            stripe_customer_id = user_profile.stripe_customer_id
+            # check whether app is subscribed or not
+            is_app_subscribed = Subscription.objects.filter(user_id=user_id,
+                                                            app_subscribed=True,
+                                                            status=1).exists()
+            payment_method = None
+            if not is_app_subscribed:
+                if payment_method_id:
+                    payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
+                        '-created_at').first()
+                else:
+                    payment_method = PaymentMethod.objects.create(payment_id=payment_method_id,
+                                                                  card_last4_no=card_last4_number,
+                                                                  user_id_id=user_id)
+
+                if stripe_customer_id and payment_method:
+                    attached = attach_payment_method(stripe_customer_id, payment_method.payment_id)
+                    customer_update = stripe.Customer.modify(stripe_customer_id,
+                                                             invoice_settings={
+                                                                 'default_payment_method': payment_method.payment_id})
+                    stripe_payment_id = payment_method.payment_id
+                    subscribe = Subscription.objects.filter(user_id=user_id,
+                                                            status=0).order("-created_at").first()
+                    stripe_Subscription_id = \
+                        create_subscription(customer_id=stripe_customer_id, price_id=subscribe.stripe_price_id,
+                                            default_payment_method=stripe_payment_id)
+
+                    if stripe_Subscription_id.status == "active":
+                        recurring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,
+                                                                stripe_Subscription_id.current_period_end)
+                        start_date = recurring_period["start_date"]
+                        end_date = recurring_period["end_date"]
+                    else:
+                        # Pay Latest Invoice of Subscription
+                        invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)  # Invoice already not paid
+                        recurring_period = get_recuring_periods(invoice.lines.data[0].period.start,
+                                                                invoice.lines.data[0].period.end)
+                        start_date = recurring_period["start_date"]
+                        end_date = recurring_period["end_date"]
+                    subscribe.update(payment_method_id=payment_method if payment_method.id else None,
+                                     stripe_payment_id=stripe_payment_id,
+                                     stripe_subscription_id=stripe_Subscription_id['id'],
+                                     start_date=start_date,
+                                     end_date=end_date)
+                    return Response({"message": "payment done successfully"}, status=status.HTTP_200_OK)
+                return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"message": "This App is already Subscribed"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        error_msg = str(e)
+        split_error_msg = str(e).split(":")
+        if len(split_error_msg) > 1:
+            error_msg = split_error_msg[1].strip()
+        return Response({"status": "failure", "error": error_msg, "message": error_msg},
+                        status=status.HTTP_400_BAD_REQUEST)

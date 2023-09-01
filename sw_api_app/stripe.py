@@ -143,6 +143,7 @@ def create_price(amount, currency, interval, interval_count, product_id):
 
 
 def create_subscription(customer_id, default_payment_method, price_id):
+# def create_subscription(customer_id, price_id):
     subscription = stripe.Subscription.create(
         customer=customer_id,
         items=[
@@ -153,7 +154,7 @@ def create_subscription(customer_id, default_payment_method, price_id):
         # payment_behavior="allow_incomplete",
         collection_method="charge_automatically",
         default_payment_method=default_payment_method,
-        expand=["latest_invoice.payment_intent"],
+        # expand=["latest_invoice.payment_intent"],
     )
     return subscription
 

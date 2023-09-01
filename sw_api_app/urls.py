@@ -39,5 +39,7 @@ urlpatterns = [
     path('user_subscription_period_list', views.user_subscription_period_list),
     path('subscription_list/', views.subscription_list),
     path('add_device_price/', views.create_device_price_admin),
-    path('offline/session/session_data/save', views.offline_session_sessiondata_save)
+    path('offline/session/session_data/save', views.offline_session_sessiondata_save),
+    path('subscription_intent/', views.subscription_payment_intent),
+    path('active_subscription/', views.active_subscription)
 ]

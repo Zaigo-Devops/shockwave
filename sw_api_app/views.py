@@ -18,7 +18,7 @@ from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializ
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
     create_address, create_product, create_price, create_subscription, delete_stripe_payment_method, \
-    stripe_ephemeral_key, create_subscription_post_payment_intent
+    stripe_ephemeral_key, create_subscription_post_payment_intent, retrieve_payment_method_id, retrieve_payment_method
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
     get_recuring_periods, \
     unix_timestamp_format, INACTIVE, get_address, ACTIVE
@@ -1947,12 +1947,54 @@ def active_subscription(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def activate_subscription(request):
+    # print("payment method retrieval", )
+
+    # price_id = "price_1NlaDGCV8cubte6v10qvUT4m"
+    # payment_intent_id = "pi_3NlaDGCV8cubte6v1EAJ1xz0"
+    # customer_id = "cus_OYhcHOrJXo2Bva"
+    # try:
+    #     payment_intent = stripe.PaymentIntent.retrieve(
+    #         "pi_3NlaDGCV8cubte6v1EAJ1xz0",
+    #     )
+    #     payment_intent_id = payment_intent["payment_method"]
+    # except Exception as e:
+    #     return Response({"message": "Payment not done yet"}, status.HTTP_400_BAD_REQUEST)
+    # print("payment intent", payment_intent)
+    # try:
+    #     resp = create_subscription_post_payment_intent(customer_id, payment_intent_id, price_id)
+    #     print("resp", resp)
+    # except Exception as e:
+    #     print("Error message", str(e))
+
     payment_intent_id = request.data.get("payment_intent_id", None)
     subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by('-created_at').first()
     if subscription:
         customer_id = subscription.stripe_customer_id
         try:
-            create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
+            payment_method_id = retrieve_payment_method_id(payment_intent_id)
+            stripe_subscription = create_subscription_post_payment_intent(customer_id, payment_method_id,
+                                                                          subscription.stripe_price_id)
+            payment_method = retrieve_payment_method(payment_method_id)
+            card_last4_no = payment_method["card"]["last4"]
+            user_id = subscription.user_id
+            if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
+                PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no, user_id=user_id)
+            try:
+                start_date = unix_timestamp_format(stripe_subscription.current_period_start)
+                end_date = unix_timestamp_format(stripe_subscription.current_period_end)
+            except Exception as e:
+                start_date = datetime.date.today()
+                end_date = start_date + datetime.timedelta(days=30)
+            subscription.status = ACTIVE
+            subscription.app_subscribed = True
+            subscription.start_date = start_date
+            subscription.end_date = end_date
+            subscription.save()
+            SubscriptionPeriod.objects.create(subscription_id=subscription,
+                                              stripe_subscription_id=stripe_subscription.id,
+                                              stripe_customer_id=customer_id, start_date=start_date,
+                                              end_date=end_date)
+            # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
         except Exception as e:
             print("stripe subscription status error exception message", str(e))
     return Response()

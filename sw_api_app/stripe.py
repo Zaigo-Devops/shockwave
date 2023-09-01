@@ -33,7 +33,11 @@ def stripe_webhook(request):
 
     if event.type == 'payment_intent.succeeded':
         payment_intent = event.data.object  # contains a stripe.PaymentIntent
-        print('PaymentIntent was successful!')
+        # payment_intent_id = payment_intent.id
+        # subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by('-created_at').first()
+        # if subscription:
+        #
+        # print('PaymentIntent was successful!')
 
     if event.type == 'invoice.paid':
         payment_intent = event.data.object
@@ -207,3 +211,17 @@ def create_subscription_post_payment_intent(customer_id, payment_intent_id, pric
         # }
     )
     return subscription
+
+
+def retrieve_payment_method_id(payment_intent_id):
+    payment_intent = stripe.PaymentIntent.retrieve(
+        payment_intent_id,
+    )
+    payment_method_id = payment_intent["payment_method"]
+    return payment_method_id
+
+
+def retrieve_payment_method(payment_method_id):
+    payment_method = stripe.PaymentMethod.retrieve(payment_method_id)
+    return payment_method
+

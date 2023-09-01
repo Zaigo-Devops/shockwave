@@ -92,7 +92,7 @@ def stripe_ephemeral_key(customer_id):
         # Create an ephemeral key associated with the customer
         ephemeral_key = stripe.EphemeralKey.create(
             customer=customer_id,
-            stripe_version="2020-08-27",  # Replace with the desired API version
+            stripe_version="2023-08-16",  # Replace with the desired API version
         )
         print('ephemeral_key', ephemeral_key)
         key = ephemeral_key.secret

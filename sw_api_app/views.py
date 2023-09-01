@@ -1821,14 +1821,24 @@ def subscription_payment_intent(request):
                     stripe_product_price_id = \
                         create_price(amount=app_price, currency='usd', interval='day', interval_count=30,
                                      product_id=stripe_product_id)['id']
-                    stripe_intent = stripe.PaymentIntent.create(
-                        amount=app_price,
-                        currency="usd",
-                        automatic_payment_methods={"enabled": True},
-                        customer=stripe_customer_id
-                    )
-                    stripe_intent_id = stripe_intent['id']
-
+                    exception_message = None
+                    try:
+                        stripe_intent = stripe.PaymentIntent.create(
+                            amount=app_price,
+                            currency="usd",
+                            automatic_payment_methods={"enabled": True},
+                            customer=stripe_customer_id
+                        )
+                        stripe_intent_id = stripe_intent['id']
+                        stripe_client_secret_id = stripe_intent['client_secret']
+                    except Exception as e:
+                        stripe_intent_id = None
+                        stripe_client_secret_id = None
+                        exception_message = str(e)
+                    if user_profile.stripe_ephemeral_key:
+                        ephemeral_key = user_profile.stripe_ephemeral_key
+                    else:
+                        ephemeral_key = stripe_ephemeral_key(stripe_customer_id)
                     subscription = Subscription.objects.create(status=INACTIVE, user_id=user,
                                                                app_subscribed=False,
                                                                # stripe_subscription_id=stripe_Subscription_id['id'],
@@ -1842,7 +1852,9 @@ def subscription_payment_intent(request):
                                                                # end_date=end_date
                                                                )
                     return Response({"stripe_payment_intent_id": stripe_intent_id,
-                                     "stripe_payment_intent": stripe_intent,
+                                     "ephemeral_key": ephemeral_key,
+                                     "customer_id": stripe_customer_id,
+                                     "stripe_client_secret": stripe_client_secret_id,
                                      "message": "Payment Intent created successfully"}, status=status.HTTP_200_OK)
                 return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
             else:

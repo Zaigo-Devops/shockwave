@@ -115,6 +115,7 @@ class UserProfile(models.Model):
     user_phone_number = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True,
                                          unique=True)
     stripe_customer_id = models.CharField(max_length=256, blank=True, null=True, default=None)
+    stripe_ephemeral_key = models.CharField(max_length=256, blank=True, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

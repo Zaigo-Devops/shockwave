@@ -17,7 +17,8 @@ from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, S
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
-    create_address, create_product, create_price, create_subscription, delete_stripe_payment_method
+    create_address, create_product, create_price, create_subscription, delete_stripe_payment_method, \
+    stripe_ephemeral_key
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
     get_recuring_periods, \
     unix_timestamp_format, INACTIVE, get_address, ACTIVE
@@ -95,6 +96,7 @@ class RegisterUserAPIView(generics.CreateAPIView):
         token_items['payment_method_count'] = payment_method
         token_items['session_count'] = session_count
         token_items['stripe_customer_id'] = user.user_profile.stripe_customer_id
+        token_items['stripe_ephemeral_key'] = user.user_profile.stripe_ephemeral_key if user.user_profile.stripe_ephemeral_key else None
         response = token_items
         return Response(response)
 
@@ -150,11 +152,13 @@ class LoginView(APIView):
             response = token_items
             if not hasattr(user, "user_profile"):
                 customer_create = create_payment_customer(user_name, email)
+                ephemeral_key = stripe_ephemeral_key(customer_create['id'])
                 response['stripe_customer_id'] = customer_create['id']
                 user_name = f"{user.first_name} {user.last_name}"
                 user_profile_serializer = UserProfileSerializer(
                     data={"user_id": user.pk, "user_profile_image": get_attachment_from_name(user_name),
-                          "stripe_customer_id": customer_create['id']
+                          "stripe_customer_id": customer_create['id'],
+                          "stripe_ephemeral_key": ephemeral_key
                           })
                 if user_profile_serializer.is_valid():
                     user_profile_serializer.save()
@@ -1838,6 +1842,7 @@ def subscription_payment_intent(request):
                                                                # end_date=end_date
                                                                )
                     return Response({"stripe_payment_intent_id": stripe_intent_id,
+                                     "stripe_payment_intent": stripe_intent,
                                      "message": "Payment Intent created successfully"}, status=status.HTTP_200_OK)
                 return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
             else:

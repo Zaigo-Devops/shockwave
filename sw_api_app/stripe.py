@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from sw_admin_app.models import Subscription, SubscriptionPeriod
 from sw_api_app.utils import ACTIVE, INACTIVE, unix_timestamp_format
 from rest_framework import status
+
 stripe.api_key = STRIPE_SECRET_KEY
 
 
@@ -26,7 +27,9 @@ def stripe_webhook(request):
     except Exception as e:
         # Invalid payload
         print("except value msg", str(e))
-        return Response({'error message': str(e),"endpoint_secret":endpoint_secret,"sig_header": sig_header,"payload":payload}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error message': str(e), "endpoint_secret": endpoint_secret, "sig_header": sig_header, "payload": payload},
+            status=status.HTTP_400_BAD_REQUEST)
 
     if event.type == 'payment_intent.succeeded':
         payment_intent = event.data.object  # contains a stripe.PaymentIntent
@@ -56,22 +59,22 @@ def stripe_webhook(request):
                                               stripe_subscription_id=stripe_Subscription_id,
                                               stripe_customer_id=stripe_customer_id, start_date=start_date,
                                               end_date=end_date)
-            
+
     if event.type == 'invoice.payment_failed':
         """payment Failed, Change the subscribed status and app subscribed is In-active"""
         payment_intent = event.data.object
         stripe_subscription_id = payment_intent.subscription
         stripe_customer_id = payment_intent.customer
-        
+
         subscription = Subscription.objects.filter(stripe_subscription_id=stripe_subscription_id,
-                                                stripe_customer_id=stripe_customer_id).first()
+                                                   stripe_customer_id=stripe_customer_id).first()
         if subscription:
             subscription.status = INACTIVE
             subscription.app_subscribed = False
             subscription.save()
     else:
         print('Unhandled event type {}'.format(event.type))
-    return Response(event,status=status.HTTP_200_OK)
+    return Response(event, status=status.HTTP_200_OK)
 
 
 def create_payment_customer(name, email, payment_method=None, phone=None):
@@ -82,6 +85,20 @@ def create_payment_customer(name, email, payment_method=None, phone=None):
         payment_method=payment_method
     )
     return customer
+
+
+def stripe_ephemeral_key(customer_id):
+    try:
+        # Create an ephemeral key associated with the customer
+        ephemeral_key = stripe.EphemeralKey.create(
+            customer=customer_id,
+            stripe_version="2020-08-27",  # Replace with the desired API version
+        )
+        print('ephemeral_key', ephemeral_key)
+        key = ephemeral_key.secret
+        return key
+    except Exception as e:
+        print("Stripe Ephemeral key error exception", str(e))
 
 
 def retrieve_payment_customer(customer_id):
@@ -143,7 +160,7 @@ def create_price(amount, currency, interval, interval_count, product_id):
 
 
 def create_subscription(customer_id, default_payment_method, price_id):
-# def create_subscription(customer_id, price_id):
+    # def create_subscription(customer_id, price_id):
     subscription = stripe.Subscription.create(
         customer=customer_id,
         items=[

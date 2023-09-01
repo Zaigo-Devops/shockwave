@@ -92,7 +92,7 @@ class Subscription(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        payments = self.payment_method_id.payment_id
+        payments = self.stripe_intent_id
         return payments
 
 

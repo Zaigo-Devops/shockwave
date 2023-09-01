@@ -5,7 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 
 from SHOCK_WAVE import settings
 from sw_admin_app.models import UserProfile, BillingAddress, Device, Subscription
-from .stripe import create_payment_customer
+from .stripe import create_payment_customer, stripe_ephemeral_key
 from sw_api_app.utils import get_attachment_from_name
 
 
@@ -93,6 +93,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         if len(user.last_name) > 0:
             name = user.first_name + ' ' + user.last_name
         stripe_customer_create = create_payment_customer(name=name, email=user.email)
+        customer_id = stripe_customer_create['id']
+        ephemeral_key = stripe_ephemeral_key(customer_id)
+        print('udyeudyyudtefye', ephemeral_key)
         insurance_provider = validated_data.get('user_profile').get('insurance_provider')
         is_promotion_email = validated_data.get('user_profile').get('is_promotion_email')
         user_phone_number = validated_data.get('user_profile').get('user_phone_number')
@@ -100,6 +103,7 @@ class RegisterSerializer(serializers.ModelSerializer):
                                                    "is_promotion_email": is_promotion_email,
                                                    "user_profile_image": get_attachment_from_name(user_name),
                                                    "stripe_customer_id": stripe_customer_create['id'],
+                                                   "stripe_ephemeral_key": ephemeral_key,
                                                    "user_phone_number": user_phone_number},
                                              many=False,
                                              read_only=False)

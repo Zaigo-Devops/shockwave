@@ -2071,7 +2071,11 @@ def activate_subscription(request):
                                                                               subscription.stripe_price_id)
                 print("stripe_subscription----activate", stripe_subscription)
             except Exception as e:
-                return Response({'errorstripecrate': str(e)})
+                return Response({'errorstripecrate': str(e),
+                                 "payment_method_id": payment_method_id,
+                                 "customer_id": customer_id,
+                                 "subscription.stripe_price_id": subscription.stripe_price_id}
+                                )
             try:
                 payment_method = retrieve_payment_method(payment_method_id)
                 print('payment_method---stripe', PaymentMethod)

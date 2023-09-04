@@ -2047,8 +2047,8 @@ def activate_subscription(request):
     #     print("Error message", str(e))
 
     payment_intent_id = request.data.get("payment_intent_id", None)
-    if not payment_intent_id:
-        return Response('Please Provide payment Intent ID', status.HTTP_200_OK)
+    # if not payment_intent_id:
+    #     return Response('Please Provide payment Intent ID', status.HTTP_200_OK)
     print("activate_payment_intent_id", payment_intent_id)
     try:
         subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by('-created_at').first()
@@ -2063,7 +2063,7 @@ def activate_subscription(request):
 
         try:
             try:
-                payment_method_id = retrieve_payment_method_id(payment_intent_id)
+                payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
             except Exception as e:
                 return Response({'error_payment_method_id': str(e)})
             try:

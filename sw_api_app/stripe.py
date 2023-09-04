@@ -9,6 +9,8 @@ from sw_admin_app.models import Subscription, SubscriptionPeriod
 from sw_api_app.utils import ACTIVE, INACTIVE, unix_timestamp_format
 from rest_framework import status
 
+from shockwave.sw_admin_app.models import PaymentMethod
+
 stripe.api_key = STRIPE_SECRET_KEY
 
 
@@ -33,7 +35,78 @@ def stripe_webhook(request):
 
     if event.type == 'payment_intent.succeeded':
         payment_intent = event.data.object  # contains a stripe.PaymentIntent
-        # payment_intent_id = payment_intent.id
+        payment_intent_id = payment_intent.id
+        print("activate_payment_intent_id", payment_intent_id)
+        try:
+            subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by(
+                '-created_at').first()
+        except Exception as e:
+            return Response({'error_subscription': str(e)})
+        if subscription:
+            try:
+                customer_id = subscription.stripe_customer_id
+                print("customer_id----activate", customer_id)
+            except Exception as e:
+                return Response({'error_customer_id': str(e)})
+
+            try:
+                try:
+                    payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
+                except Exception as e:
+                    return Response({'error_payment_method_id': str(e)})
+                try:
+                    stripe_subscription = create_subscription_post_payment_intent(customer_id, payment_method_id,
+                                                                                  subscription.stripe_price_id)
+                    print("stripe_subscription----activate", stripe_subscription)
+                except Exception as e:
+                    return Response({'errorstripecrate': str(e),
+                                     "payment_method_id": payment_method_id,
+                                     "customer_id": customer_id,
+                                     "subscription.stripe_price_id": subscription.stripe_price_id}
+                                    )
+                try:
+                    payment_method = retrieve_payment_method(payment_method_id)
+                    print('payment_method---stripe', payment_method)
+                except Exception as e:
+                    return Response({'error': str(e)})
+                try:
+                    card_last4_no = payment_method["card"]["last4"]
+                    user_id = subscription.user_id
+                except Exception as e:
+                    return Response({'error': str(e)})
+                if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
+                    print('PaymentMethod --not', PaymentMethod)
+                    PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no,
+                                                 user_id=user_id)
+                print('PaymentMethod---afeter', PaymentMethod)
+                try:
+                    start_date = unix_timestamp_format(stripe_subscription.current_period_start)
+                    end_date = unix_timestamp_format(stripe_subscription.current_period_end)
+                except Exception as e:
+                    start_date = datetime.date.today()
+                    end_date = start_date + datetime.timedelta(days=30)
+                subscription.status = ACTIVE
+                subscription.app_subscribed = True
+                subscription.start_date = start_date
+                subscription.end_date = end_date
+                subscription.save()
+                sub_per = SubscriptionPeriod.objects.create(subscription_id=subscription,
+                                                            stripe_subscription_id=stripe_subscription.id,
+                                                            stripe_customer_id=customer_id, start_date=start_date,
+                                                            end_date=end_date)
+                print('sub_per', sub_per.id)
+                return Response({"activate_payment_intent_id": payment_intent_id,
+                                 "subscription----activate": stripe_subscription,
+                                 "payment_method---stripe": PaymentMethod,
+                                 "sub_per": payment_intent_id,
+                                 "sub": subscription.app_subscribed,
+                                 "start_date": subscription.start_date,
+                                 "end_date": subscription.end_date}
+                                )
+                # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
+            except Exception as e:
+                return Response({'error': str(e)})
+        # return Response("no plan")
         # subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by('-created_at').first()
         # if subscription:
         #
@@ -190,7 +263,7 @@ def delete_stripe_payment_method(stripe_payment_id):
     return delete
 
 
-def create_subscription_post_payment_intent(customer_id, payment_intent_id, price_id):
+def create_subscription_post_payment_intent(customer_id, payment_method_id, price_id):
     # def create_subscription(customer_id, price_id):
     subscription = stripe.Subscription.create(
         customer=customer_id,
@@ -201,7 +274,7 @@ def create_subscription_post_payment_intent(customer_id, payment_intent_id, pric
         ],
         # payment_behavior='default_incomplete',
         # collection_method="charge_automatically",
-        default_payment_method=payment_intent_id,
+        default_payment_method=payment_method_id,
         expand=["latest_invoice.payment_intent"],
         # customer_action='use_payment_method',
         # payment_settings={
@@ -218,7 +291,7 @@ def retrieve_payment_method_id(payment_intent_id):
         payment_intent_id,
     )
     payment_method_id = payment_intent["payment_method"]
-    return payment_method_id
+    return payment_intent , payment_method_id
 
 
 def retrieve_payment_method(payment_method_id):

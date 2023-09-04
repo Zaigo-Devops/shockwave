@@ -5,11 +5,10 @@ import stripe
 from SHOCK_WAVE.settings import STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SIGNING_SECRET
 from django.views.decorators.csrf import csrf_exempt
 
-from sw_admin_app.models import Subscription, SubscriptionPeriod
+from sw_admin_app.models import Subscription, SubscriptionPeriod, PaymentMethod
 from sw_api_app.utils import ACTIVE, INACTIVE, unix_timestamp_format
 from rest_framework import status
 
-from shockwave.sw_admin_app.models import PaymentMethod
 
 stripe.api_key = STRIPE_SECRET_KEY
 

@@ -2020,5 +2020,5 @@ def activate_subscription(request):
                             )
             # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
         except Exception as e:
-            print("stripe subscription status error exception message", str(e))
-    return Response("no plan")
+            return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+    # return Response("no plan")

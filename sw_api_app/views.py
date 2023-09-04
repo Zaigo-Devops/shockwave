@@ -1970,6 +1970,8 @@ def activate_subscription(request):
     #     print("Error message", str(e))
 
     payment_intent_id = request.data.get("payment_intent_id", None)
+    if not payment_intent_id:
+        return Response('Please Provide payment Intent ID', status.HTTP_200_OK)
     print("activate_payment_intent_id", payment_intent_id)
     subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by('-created_at').first()
     print("subscription----activate", subscription)
@@ -2019,4 +2021,4 @@ def activate_subscription(request):
             # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
         except Exception as e:
             print("stripe subscription status error exception message", str(e))
-    return Response()
+    return Response("no plan")

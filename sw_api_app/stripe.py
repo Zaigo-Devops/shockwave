@@ -9,7 +9,6 @@ from sw_admin_app.models import Subscription, SubscriptionPeriod, PaymentMethod
 from sw_api_app.utils import ACTIVE, INACTIVE, unix_timestamp_format
 from rest_framework import status
 
-
 stripe.api_key = STRIPE_SECRET_KEY
 
 
@@ -35,7 +34,10 @@ def stripe_webhook(request):
     if event.type == 'payment_intent.succeeded':
         payment_intent = event.data.object  # contains a stripe.PaymentIntent
         payment_intent_id = payment_intent.id
-        print("activate_payment_intent_id", payment_intent_id)
+        card_last4_no = None
+        customer_id = None
+        payment_method_id = None
+        subscription = None
         try:
             subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by(
                 '-created_at').first()
@@ -44,7 +46,6 @@ def stripe_webhook(request):
         if subscription:
             try:
                 customer_id = subscription.stripe_customer_id
-                print("customer_id----activate", customer_id)
             except Exception as e:
                 print(str(e))
 
@@ -56,12 +57,10 @@ def stripe_webhook(request):
                 try:
                     stripe_subscription = create_subscription_post_payment_intent(customer_id, payment_method_id,
                                                                                   subscription.stripe_price_id)
-                    print("stripe_subscription----activate", stripe_subscription)
                 except Exception as e:
                     print(str(e))
                 try:
                     payment_method = retrieve_payment_method(payment_method_id)
-                    print('payment_method---stripe', payment_method)
                 except Exception as e:
                     print(str(e))
                 try:
@@ -70,10 +69,8 @@ def stripe_webhook(request):
                 except Exception as e:
                     print(str(e))
                 if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
-                    print('PaymentMethod --not', PaymentMethod)
                     PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no,
                                                  user_id=user_id)
-                print('PaymentMethod---afeter', PaymentMethod)
                 try:
                     start_date = unix_timestamp_format(stripe_subscription.current_period_start)
                     end_date = unix_timestamp_format(stripe_subscription.current_period_end)
@@ -89,11 +86,9 @@ def stripe_webhook(request):
                                                             stripe_subscription_id=stripe_subscription.id,
                                                             stripe_customer_id=customer_id, start_date=start_date,
                                                             end_date=end_date)
-                print('sub_per', sub_per.id)
                 # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
             except Exception as e:
                 return Response({'error': str(e)})
-
 
     if event.type == 'invoice.paid':
         payment_intent = event.data.object
@@ -274,10 +269,9 @@ def retrieve_payment_method_id(payment_intent_id):
         payment_intent_id,
     )
     payment_method_id = payment_intent["payment_method"]
-    return payment_intent , payment_method_id
+    return payment_intent, payment_method_id
 
 
 def retrieve_payment_method(payment_method_id):
     payment_method = stripe.PaymentMethod.retrieve(payment_method_id)
     return payment_method
-

@@ -78,6 +78,9 @@ def stripe_webhook(request):
                     start_date = datetime.date.today()
                     end_date = start_date + datetime.timedelta(days=30)
                 subscription.status = ACTIVE
+                subscription.stripe_subscription_id = stripe_subscription['id']
+                subscription.stripe_payment_id = payment_method_id
+                subscription.payment_id = None
                 subscription.app_subscribed = True
                 subscription.start_date = start_date
                 subscription.end_date = end_date

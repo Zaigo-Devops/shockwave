@@ -1984,12 +1984,14 @@ def activate_subscription(request):
             print("stripe_subscription----activate", stripe_subscription)
 
             payment_method = retrieve_payment_method(payment_method_id)
+            print('payment_method---stripe', PaymentMethod)
+
             card_last4_no = payment_method["card"]["last4"]
             user_id = subscription.user_id
             if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
                 print('PaymentMethod --not', PaymentMethod)
                 PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no, user_id=user_id)
-            print('PaymentMethod', PaymentMethod)
+            print('PaymentMethod---afeter', PaymentMethod)
             try:
                 start_date = unix_timestamp_format(stripe_subscription.current_period_start)
                 end_date = unix_timestamp_format(stripe_subscription.current_period_end)
@@ -2005,7 +2007,15 @@ def activate_subscription(request):
                                               stripe_subscription_id=stripe_subscription.id,
                                               stripe_customer_id=customer_id, start_date=start_date,
                                               end_date=end_date)
-            print('sub_per', sub_per)
+            print('sub_per', sub_per.id)
+            return Response({"activate_payment_intent_id": payment_intent_id,
+                             "subscription----activate": stripe_subscription,
+                             "payment_method---stripe": PaymentMethod,
+                             "sub_per": payment_intent_id,
+                             "sub": subscription.app_subscribed,
+                             "start_date": subscription.start_date,
+                             "end_date": subscription.end_date}
+                            )
             # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
         except Exception as e:
             print("stripe subscription status error exception message", str(e))

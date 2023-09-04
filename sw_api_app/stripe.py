@@ -40,7 +40,7 @@ def stripe_webhook(request):
             subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by(
                 '-created_at').first()
         except Exception as e:
-            return Response({'error_subscription': str(e)})
+            print(str(e))
         if subscription:
             try:
                 customer_id = subscription.stripe_customer_id

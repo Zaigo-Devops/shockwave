@@ -574,6 +574,7 @@ def cancel_registration(request):
             if subscription:
                 delete_subscription(subscription.stripe_subscription_id)
                 subscription.status = 0
+                subscription.app_subscribed = False
                 subscription.save()
                 return Response({'message': 'Subscription Cancelled'}, status=status.HTTP_200_OK)
             else:

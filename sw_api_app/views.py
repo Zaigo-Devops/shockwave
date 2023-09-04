@@ -1807,11 +1807,13 @@ def subscription_payment_intent(request):
             except:
                 return Response({'msg': "User or User Profile Does Not Exists"}, status.HTTP_400_BAD_REQUEST)
             stripe_customer_id = user_profile.stripe_customer_id
+            print("stripe_customer_id", stripe_customer_id)
             user_unique_indentifer = f'{user.first_name}-{user.email}'  # For product create against the user
             # check whether app is subscribed or not
             is_app_subscribed = Subscription.objects.filter(user_id=user_id,
                                                             app_subscribed=True,
                                                             status=1).exists()
+            print("is_app_subscribed", is_app_subscribed)
             if not is_app_subscribed:
                 if stripe_customer_id:
                     stripe_product_id = create_product(product_name=user_unique_indentifer,
@@ -1852,6 +1854,7 @@ def subscription_payment_intent(request):
                                                                # start_date=start_date,
                                                                # end_date=end_date
                                                                )
+                    print("ephemeral_key", ephemeral_key)
                     return Response({"stripe_payment_intent_id": stripe_intent_id,
                                      "ephemeral_key": ephemeral_key,
                                      "customer_id": stripe_customer_id,
@@ -1967,18 +1970,26 @@ def activate_subscription(request):
     #     print("Error message", str(e))
 
     payment_intent_id = request.data.get("payment_intent_id", None)
+    print("activate_payment_intent_id", payment_intent_id)
     subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by('-created_at').first()
+    print("subscription----activate", subscription)
     if subscription:
         customer_id = subscription.stripe_customer_id
+        print("customer_id----activate", customer_id)
+
         try:
             payment_method_id = retrieve_payment_method_id(payment_intent_id)
             stripe_subscription = create_subscription_post_payment_intent(customer_id, payment_method_id,
                                                                           subscription.stripe_price_id)
+            print("stripe_subscription----activate", stripe_subscription)
+
             payment_method = retrieve_payment_method(payment_method_id)
             card_last4_no = payment_method["card"]["last4"]
             user_id = subscription.user_id
             if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
+                print('PaymentMethod --not', PaymentMethod)
                 PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no, user_id=user_id)
+            print('PaymentMethod', PaymentMethod)
             try:
                 start_date = unix_timestamp_format(stripe_subscription.current_period_start)
                 end_date = unix_timestamp_format(stripe_subscription.current_period_end)
@@ -1990,10 +2001,11 @@ def activate_subscription(request):
             subscription.start_date = start_date
             subscription.end_date = end_date
             subscription.save()
-            SubscriptionPeriod.objects.create(subscription_id=subscription,
+            sub_per = SubscriptionPeriod.objects.create(subscription_id=subscription,
                                               stripe_subscription_id=stripe_subscription.id,
                                               stripe_customer_id=customer_id, start_date=start_date,
                                               end_date=end_date)
+            print('sub_per', sub_per)
             # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
         except Exception as e:
             print("stripe subscription status error exception message", str(e))

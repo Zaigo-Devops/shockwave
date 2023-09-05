@@ -96,8 +96,8 @@ class RegisterUserAPIView(generics.CreateAPIView):
         token_items['payment_method_count'] = payment_method
         token_items['session_count'] = session_count
         token_items['stripe_customer_id'] = user.user_profile.stripe_customer_id
-        token_items[
-            'stripe_ephemeral_key'] = user.user_profile.stripe_ephemeral_key if user.user_profile.stripe_ephemeral_key else None
+        # token_items[
+        #     'stripe_ephemeral_key'] = user.user_profile.stripe_ephemeral_key if user.user_profile.stripe_ephemeral_key else None
         response = token_items
         return Response(response)
 
@@ -153,13 +153,13 @@ class LoginView(APIView):
             response = token_items
             if not hasattr(user, "user_profile"):
                 customer_create = create_payment_customer(user_name, email)
-                ephemeral_key = stripe_ephemeral_key(customer_create['id'])
+                # ephemeral_key = stripe_ephemeral_key(customer_create['id'])
                 response['stripe_customer_id'] = customer_create['id']
                 user_name = f"{user.first_name} {user.last_name}"
                 user_profile_serializer = UserProfileSerializer(
                     data={"user_id": user.pk, "user_profile_image": get_attachment_from_name(user_name),
                           "stripe_customer_id": customer_create['id'],
-                          "stripe_ephemeral_key": ephemeral_key
+                          # "stripe_ephemeral_key": ephemeral_key
                           })
                 if user_profile_serializer.is_valid():
                     user_profile_serializer.save()
@@ -1808,6 +1808,7 @@ def subscription_payment_intent(request):
             except:
                 return Response({'msg': "User or User Profile Does Not Exists"}, status.HTTP_400_BAD_REQUEST)
             stripe_customer_id = user_profile.stripe_customer_id
+            ephemeral_key = stripe_ephemeral_key(stripe_customer_id)
             # print("stripe_customer_id", stripe_customer_id)
             user_unique_indentifer = f'{user.first_name}-{user.email}'  # For product create against the user
             # check whether app is subscribed or not
@@ -1839,10 +1840,10 @@ def subscription_payment_intent(request):
                         stripe_intent_id = None
                         stripe_client_secret_id = None
                         exception_message = str(e)
-                    if user_profile.stripe_ephemeral_key:
-                        ephemeral_key = user_profile.stripe_ephemeral_key
-                    else:
-                        ephemeral_key = stripe_ephemeral_key(stripe_customer_id)
+                    # if user_profile.stripe_ephemeral_key:
+                    #     ephemeral_key = user_profile.stripe_ephemeral_key
+                    # else:
+                    #     ephemeral_key = stripe_ephemeral_key(stripe_customer_id)
                     subscription = Subscription.objects.create(status=INACTIVE, user_id=user,
                                                                app_subscribed=False,
                                                                # stripe_subscription_id=stripe_Subscription_id['id'],

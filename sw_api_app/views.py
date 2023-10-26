@@ -227,7 +227,8 @@ def is_device_registration(request):
                                  "duration": duration.days,
                                  # subscription_end_date This used for offline api,when the subscription is end
                                  # for user.
-                                 "subscription_end_date": subscription.end_date}, status=status.HTTP_200_OK)
+                                 "subscription_end_date": subscription.end_date,
+                                 "stripe_subscription_id": subscription.stripe_subscription_id}, status=status.HTTP_200_OK)
         else:
             return Response({"is_subscribed": False,
                              "device_price": app_price.price,

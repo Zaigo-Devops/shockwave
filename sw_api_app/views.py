@@ -1816,8 +1816,9 @@ def subscription_payment_intent(request):
             is_app_subscribed = Subscription.objects.filter(user_id=user_id,
                                                             app_subscribed=True,
                                                             status=1).exists()
-            # print("is_app_subscribed", is_app_subscribed)
+            print("is_app_subscribed", is_app_subscribed)
             if not is_app_subscribed:
+                print("is_app_subscribed---if", "False")
                 if stripe_customer_id:
                     stripe_product_id = create_product(product_name=user_unique_indentifer,
                                                        description=f'For {user.first_name},unique identifier {user_unique_indentifer}  is '
@@ -1857,8 +1858,11 @@ def subscription_payment_intent(request):
                                                                # start_date=start_date,
                                                                # end_date=end_date
                                                                )
+                    print("subscription---if", subscription)
+
                     # print("ephemeral_key", ephemeral_key)
                     return Response({"stripe_payment_intent_id": stripe_intent_id,
+                                    "subscription_id": subscription.id,
                                      "ephemeral_key": ephemeral_key,
                                      "customer_id": stripe_customer_id,
                                      "stripe_client_secret": stripe_client_secret_id,

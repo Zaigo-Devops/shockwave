@@ -28,7 +28,7 @@ urlpatterns = [
     path('registered_list', views.previous_connected_list),
     path('device_session_data_history/', views.device_session_data_history),
     path('payment_method_create/', views.payment_method_creation),
-    path('payment_method_initialized/', views.payment_method_initialized),  # Api for Stripe Subscription active.
+    # path('payment_method_initialized/', views.payment_method_initialized),  # Api for Stripe Subscription active.
     path('payment_method_list/', views.my_payment_method),
     path('stripe_webhook/', stripe_webhook),
     path('change_password/', views.change_password),
@@ -41,6 +41,4 @@ urlpatterns = [
     path('add_device_price/', views.create_device_price_admin),
     path('offline/session/session_data/save', views.offline_session_sessiondata_save),
     path('subscription_intent/', views.subscription_payment_intent),
-    # path('active_subscription/', views.active_subscription),
-    path('activate_subscription/', views.activate_subscription)
 ]

@@ -962,6 +962,8 @@ def pdf_generate(sub_device, time_zone):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def payment_method_creation(request):
+    """Billing data save in local table
+    Note: Card details are handled by frontend"""
     if request.method == 'POST':
         try:
             # card_type = request.data.get('card_type', None)
@@ -1016,6 +1018,7 @@ def payment_method_creation(request):
 
 @api_view(['GET'])
 def my_payment_method(request):
+    """User Payment card added details are show in a list view"""
     if request.method == 'GET':
         try:
             user_id = get_member_id(request)
@@ -1130,80 +1133,84 @@ def app_price_update(actual_price=False):
 #         return Response({"status": "failure", "error": error_msg, "message": error_msg},
 #                         status=status.HTTP_400_BAD_REQUEST)
 
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def payment_method_initialized(request):
-    """
-    Subscription Activate for a APP --- Recurring Payment
-    """
-    try:
-        if request.method == "POST":
-            payment_method_id = request.data.get('payment_method_id')
-            user_id = get_member_id(request)
-            try:
-                user = User.objects.get(pk=user_id)
-                user_profile = UserProfile.objects.get(user_id=user_id)
-            except:
-                return Response({'msg': "User or User Profile Does Not Exists"}, status.HTTP_400_BAD_REQUEST)
-            stripe_customer_id = user_profile.stripe_customer_id
-            user_unique_indentifer = f'{user.first_name}-{user.email}'  # For product create against the user
-            # check whether app is subscribed or not
-            is_app_subscribed = Subscription.objects.filter(user_id=user_id,
-                                                            app_subscribed=True,
-                                                            status=1).exists()
-            if not is_app_subscribed:
-                if payment_method_id:
-                    payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
-                        '-created_at').first()
-                    if not payment_method:
-                        payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
-                stripe_payment_id = payment_method.payment_id
-                if stripe_customer_id:
-                    stripe_product_id = create_product(product_name=user_unique_indentifer,
-                                                       description=f'For {user.first_name},unique identifier {user_unique_indentifer}  is '
-                                                                   f'registered for App.')['id']
-                    app_price = app_price_update()
-                    stripe_product_price_id = \
-                        create_price(amount=app_price, currency='usd', interval='day', interval_count=30,
-                                     product_id=stripe_product_id)['id']
-                    stripe_Subscription_id = \
-                        create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
-                                            default_payment_method=stripe_payment_id)
-
-                    if stripe_Subscription_id.status == "active":
-                        recurring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,
-                                                                stripe_Subscription_id.current_period_end)
-                        start_date = recurring_period["start_date"]
-                        end_date = recurring_period["end_date"]
-                    else:
-                        # Pay Latest Invoice of Subscription
-                        invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)  # Invoice already not paid
-                        recurring_period = get_recuring_periods(invoice.lines.data[0].period.start,
-                                                                invoice.lines.data[0].period.end)
-                        start_date = recurring_period["start_date"]
-                        end_date = recurring_period["end_date"]
-                    subscription = Subscription.objects.create(status=INACTIVE, user_id=user,
-                                                               app_subscribed=False,
-                                                               payment_method_id=payment_method,
-                                                               stripe_payment_id=stripe_payment_id,
-                                                               stripe_subscription_id=stripe_Subscription_id['id'],
-                                                               stripe_customer_id=stripe_customer_id,
-                                                               subscription_price=app_price_update(
-                                                                   actual_price=True),
-                                                               start_date=start_date,
-                                                               end_date=end_date)
-                    return Response({"message": "payment done successfully"}, status=status.HTTP_200_OK)
-                return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
-            else:
-                return Response({"message": "This App is already Subscribed"}, status=status.HTTP_200_OK)
-    except Exception as e:
-        error_msg = str(e)
-        split_error_msg = str(e).split(":")
-        if len(split_error_msg) > 1:
-            error_msg = split_error_msg[1].strip()
-        return Response({"status": "failure", "error": error_msg, "message": error_msg},
-                        status=status.HTTP_400_BAD_REQUEST)
+"""
+payment_method_initialized
+Note: In this api the stripe payment method is handled by backend, but we facing issues to encrypt the card details.
+so payment is handled by frontend
+"""
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def payment_method_initialized(request):
+#     """
+#     Subscription Activate for a APP --- Recurring Payment
+#     """
+#     try:
+#         if request.method == "POST":
+#             payment_method_id = request.data.get('payment_method_id')
+#             user_id = get_member_id(request)
+#             try:
+#                 user = User.objects.get(pk=user_id)
+#                 user_profile = UserProfile.objects.get(user_id=user_id)
+#             except:
+#                 return Response({'msg': "User or User Profile Does Not Exists"}, status.HTTP_400_BAD_REQUEST)
+#             stripe_customer_id = user_profile.stripe_customer_id
+#             user_unique_indentifer = f'{user.first_name}-{user.email}'  # For product create against the user
+#             # check whether app is subscribed or not
+#             is_app_subscribed = Subscription.objects.filter(user_id=user_id,
+#                                                             app_subscribed=True,
+#                                                             status=1).exists()
+#             if not is_app_subscribed:
+#                 if payment_method_id:
+#                     payment_method = PaymentMethod.objects.filter(pk=payment_method_id, user_id=user_id).order_by(
+#                         '-created_at').first()
+#                     if not payment_method:
+#                         payment_method = PaymentMethod.objects.filter(user_id=user_id).order_by('-created_at').first()
+#                 stripe_payment_id = payment_method.payment_id
+#                 if stripe_customer_id:
+#                     stripe_product_id = create_product(product_name=user_unique_indentifer,
+#                                                        description=f'For {user.first_name},unique identifier {user_unique_indentifer}  is '
+#                                                                    f'registered for App.')['id']
+#                     app_price = app_price_update()
+#                     stripe_product_price_id = \
+#                         create_price(amount=app_price, currency='usd', interval='day', interval_count=30,
+#                                      product_id=stripe_product_id)['id']
+#                     stripe_Subscription_id = \
+#                         create_subscription(customer_id=stripe_customer_id, price_id=stripe_product_price_id,
+#                                             default_payment_method=stripe_payment_id)
+#
+#                     if stripe_Subscription_id.status == "active":
+#                         recurring_period = get_recuring_periods(stripe_Subscription_id.current_period_start,
+#                                                                 stripe_Subscription_id.current_period_end)
+#                         start_date = recurring_period["start_date"]
+#                         end_date = recurring_period["end_date"]
+#                     else:
+#                         # Pay Latest Invoice of Subscription
+#                         invoice = stripe.Invoice.pay(stripe_Subscription_id.latest_invoice)  # Invoice already not paid
+#                         recurring_period = get_recuring_periods(invoice.lines.data[0].period.start,
+#                                                                 invoice.lines.data[0].period.end)
+#                         start_date = recurring_period["start_date"]
+#                         end_date = recurring_period["end_date"]
+#                     subscription = Subscription.objects.create(status=INACTIVE, user_id=user,
+#                                                                app_subscribed=False,
+#                                                                payment_method_id=payment_method,
+#                                                                stripe_payment_id=stripe_payment_id,
+#                                                                stripe_subscription_id=stripe_Subscription_id['id'],
+#                                                                stripe_customer_id=stripe_customer_id,
+#                                                                subscription_price=app_price_update(
+#                                                                    actual_price=True),
+#                                                                start_date=start_date,
+#                                                                end_date=end_date)
+#                     return Response({"message": "payment done successfully"}, status=status.HTTP_200_OK)
+#                 return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
+#             else:
+#                 return Response({"message": "This App is already Subscribed"}, status=status.HTTP_200_OK)
+#     except Exception as e:
+#         error_msg = str(e)
+#         split_error_msg = str(e).split(":")
+#         if len(split_error_msg) > 1:
+#             error_msg = split_error_msg[1].strip()
+#         return Response({"status": "failure", "error": error_msg, "message": error_msg},
+#                         status=status.HTTP_400_BAD_REQUEST)
 
 
 # @api_view(['POST'])
@@ -1234,6 +1241,9 @@ def change_password(request):
         return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
 
 
+"""
+PDF export api, But we handled this functionality  in session data history list
+"""
 # @api_view(["GET"])
 # @permission_classes([IsAuthenticated])
 # def export_session_data_history_as_pdf(request):
@@ -1298,7 +1308,9 @@ def change_password(request):
 #         return Response({"url": url}, status.HTTP_200_OK)
 #     return Response({"data": "NO data"})
 
-
+"""
+Graph api also change some concept this code for our reference
+"""
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 # def get_session_detail_history_for_graph(request):
@@ -1481,7 +1493,7 @@ def user_subscription_period_list(request):
 #         return value_string, encoded_string
 #     return None
 
-
+"""For backend reference api"""
 @api_view(['GET'])
 def subscription_list(request):
     if request.method == 'GET':
@@ -1731,7 +1743,8 @@ def session_data_graph(sessions, date_values, time_zone):
 #                 session_data.save()
 #         return Response({"message": "Session and session data save Successfully"}, status.HTTP_200_OK)
 
-
+"""
+Here we handled the session and session data in list of data"""
 @api_view(['POST'])
 def offline_session_sessiondata_save(request):
     from datetime import datetime
@@ -1798,6 +1811,8 @@ def offline_session_sessiondata_save(request):
 @permission_classes([IsAuthenticated])
 def subscription_payment_intent(request):
     """
+    payment intent in stripe ,price,product create ephemeral key for stripe are created and return the value to frontend
+    and they started the payment intended successes --- webhook handled the progress.
     Subscription  for a APP --- Recurring Payment
     """
     try:
@@ -2029,10 +2044,4 @@ def subscription_payment_intent(request):
 #         except Exception as e:
 #             return Response({'error': str(e)})
 #     # return Response("no plan")
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def activate_subscription(request):
-    return Response()
 

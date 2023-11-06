@@ -41,4 +41,5 @@ urlpatterns = [
     path('add_device_price/', views.create_device_price_admin),
     path('offline/session/session_data/save', views.offline_session_sessiondata_save),
     path('subscription_intent/', views.subscription_payment_intent),
+    path('activate_subscription/', views.activate_subscription),
 ]

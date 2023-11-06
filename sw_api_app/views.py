@@ -1815,84 +1815,82 @@ def subscription_payment_intent(request):
     and they started the payment intended successes --- webhook handled the progress.
     Subscription  for a APP --- Recurring Payment
     """
-    # try:
-    if request.method == "POST":
-        user_id = get_member_id(request)
-        try:
-            user = User.objects.get(pk=user_id)
-            user_profile = UserProfile.objects.get(user_id=user_id)
-        except:
-            return Response({'msg': "User or User Profile Does Not Exists"}, status.HTTP_400_BAD_REQUEST)
-        stripe_customer_id = user_profile.stripe_customer_id
-        ephemeral_key = stripe_ephemeral_key(stripe_customer_id)
-        # print("stripe_customer_id", stripe_customer_id)
-        user_unique_indentifer = f'{user.first_name}-{user.email}'  # For product create against the user
-        # check whether app is subscribed or not
-        is_app_subscribed = Subscription.objects.filter(user_id=user_id,
-                                                        app_subscribed=True,
-                                                        status=1).exists()
-        print("is_app_subscribed", is_app_subscribed)
-        if not is_app_subscribed:
-            print("is_app_subscribed---if", "False")
-            if stripe_customer_id:
-                stripe_product_id = create_product(product_name=user_unique_indentifer,
-                                                   description=f'For {user.first_name},unique identifier {user_unique_indentifer}  is '
-                                                               f'registered for App.')['id']
-                app_price = app_price_update()
-                stripe_product_price_id = \
-                    create_price(amount=app_price, currency='usd', interval='day', interval_count=30,
-                                 product_id=stripe_product_id)['id']
-                exception_message = None
-                try:
-                    stripe_intent = stripe.PaymentIntent.create(
-                        amount=app_price,
-                        currency="usd",
-                        automatic_payment_methods={"enabled": True},
-                        customer=stripe_customer_id
-                    )
-                    stripe_intent_id = stripe_intent['id']
-                    stripe_client_secret_id = stripe_intent['client_secret']
-                    # print("stripe payment intent", stripe_intent)
-                except Exception as e:
-                    stripe_intent_id = None
-                    stripe_client_secret_id = None
-                    exception_message = str(e)
-                # if user_profile.stripe_ephemeral_key:
-                #     ephemeral_key = user_profile.stripe_ephemeral_key
-                # else:
-                #     ephemeral_key = stripe_ephemeral_key(stripe_customer_id)
-                subscription = Subscription.objects.create(status=INACTIVE, user_id=user,
-                                                           app_subscribed=False,
-                                                           # stripe_subscription_id=stripe_Subscription_id['id'],
-                                                           stripe_customer_id=stripe_customer_id,
-                                                           stripe_price_id=stripe_product_price_id,
-                                                           stripe_product_id=stripe_product_id,
-                                                           stripe_intent_id=stripe_intent_id,
-                                                           subscription_price=app_price_update(
-                                                               actual_price=True),
-                                                           # start_date=start_date,
-                                                           # end_date=end_date
-                                                           )
-                # print("subscription---if", subscription)
+    try:
+        if request.method == "POST":
+            user_id = get_member_id(request)
+            try:
+                user = User.objects.get(pk=user_id)
+                user_profile = UserProfile.objects.get(user_id=user_id)
+            except:
+                return Response({'msg': "User or User Profile Does Not Exists"}, status.HTTP_400_BAD_REQUEST)
+            stripe_customer_id = user_profile.stripe_customer_id
+            ephemeral_key = stripe_ephemeral_key(stripe_customer_id)
+            # print("stripe_customer_id", stripe_customer_id)
+            user_unique_indentifer = f'{user.first_name}-{user.email}'  # For product create against the user
+            # check whether app is subscribed or not
+            is_app_subscribed = Subscription.objects.filter(user_id=user_id,
+                                                            app_subscribed=True,
+                                                            status=1).exists()
+            if not is_app_subscribed:
+                if stripe_customer_id:
+                    stripe_product_id = create_product(product_name=user_unique_indentifer,
+                                                       description=f'For {user.first_name},unique identifier {user_unique_indentifer}  is '
+                                                                   f'registered for App.')['id']
+                    app_price = app_price_update()
+                    stripe_product_price_id = \
+                        create_price(amount=app_price, currency='usd', interval='day', interval_count=30,
+                                     product_id=stripe_product_id)['id']
+                    exception_message = None
+                    try:
+                        stripe_intent = stripe.PaymentIntent.create(
+                            amount=app_price,
+                            currency="usd",
+                            automatic_payment_methods={"enabled": True},
+                            customer=stripe_customer_id
+                        )
+                        stripe_intent_id = stripe_intent['id']
+                        stripe_client_secret_id = stripe_intent['client_secret']
+                        # print("stripe payment intent", stripe_intent)
+                    except Exception as e:
+                        stripe_intent_id = None
+                        stripe_client_secret_id = None
+                        exception_message = str(e)
+                    # if user_profile.stripe_ephemeral_key:
+                    #     ephemeral_key = user_profile.stripe_ephemeral_key
+                    # else:
+                    #     ephemeral_key = stripe_ephemeral_key(stripe_customer_id)
+                    subscription = Subscription.objects.create(status=INACTIVE, user_id=user,
+                                                               app_subscribed=False,
+                                                               # stripe_subscription_id=stripe_Subscription_id['id'],
+                                                               stripe_customer_id=stripe_customer_id,
+                                                               stripe_price_id=stripe_product_price_id,
+                                                               stripe_product_id=stripe_product_id,
+                                                               stripe_intent_id=stripe_intent_id,
+                                                               subscription_price=app_price_update(
+                                                                   actual_price=True),
+                                                               # start_date=start_date,
+                                                               # end_date=end_date
+                                                               )
+                    # print("subscription---if", subscription)
 
-                # print("ephemeral_key", ephemeral_key)
-                return Response({"stripe_payment_intent_id": stripe_intent_id,
-                                "subscription_id": subscription.id,
-                                 "ephemeral_key": ephemeral_key,
-                                 "customer_id": stripe_customer_id,
-                                 "stripe_client_secret": stripe_client_secret_id,
-                                 "message": "Payment Intent created successfully",
-                                 "payment_intent_message": exception_message}, status=status.HTTP_200_OK)
-            return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response({"message": "This App is already Subscribed"}, status=status.HTTP_200_OK)
-    # except Exception as e:
-    #     error_msg = str(e)
-    #     split_error_msg = str(e).split(":")
-    #     if len(split_error_msg) > 1:
-    #         error_msg = split_error_msg[1].strip()
-    #     return Response({"status": "failure", "error": error_msg, "message": error_msg},
-    #                     status=status.HTTP_400_BAD_REQUEST)
+                    # print("ephemeral_key", ephemeral_key)
+                    return Response({"stripe_payment_intent_id": stripe_intent_id,
+                                    "subscription_id": subscription.id,
+                                     "ephemeral_key": ephemeral_key,
+                                     "customer_id": stripe_customer_id,
+                                     "stripe_client_secret": stripe_client_secret_id,
+                                     "message": "Payment Intent created successfully",
+                                     "payment_intent_message": exception_message}, status=status.HTTP_200_OK)
+                return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"message": "This App is already Subscribed"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        error_msg = str(e)
+        split_error_msg = str(e).split(":")
+        if len(split_error_msg) > 1:
+            error_msg = split_error_msg[1].strip()
+        return Response({"status": "failure", "error": error_msg, "message": error_msg},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 # @api_view(['POST'])
@@ -2045,3 +2043,8 @@ def subscription_payment_intent(request):
 #             return Response({'error': str(e)})
 #     # return Response("no plan")
 
+@api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+def activate_subscription(request):
+    pass
+    return Response("success", status.HTTP_200_OK)

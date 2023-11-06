@@ -2043,7 +2043,7 @@ def subscription_payment_intent(request):
 #             return Response({'error': str(e)})
 #     # return Response("no plan")
 
-@api_view(['GET'])
+@api_view(['POST'])
 # @permission_classes([IsAuthenticated])
 def activate_subscription(request):
     pass

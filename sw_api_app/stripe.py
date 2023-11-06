@@ -15,7 +15,6 @@ stripe.api_key = STRIPE_SECRET_KEY
 @api_view(['POST'])
 @csrf_exempt
 def stripe_webhook(request):
-    print("stripe_webhook-api cal")
     payload = request.body
     sig_header = request.META['HTTP_STRIPE_SIGNATURE']
     endpoint_secret = STRIPE_WEBHOOK_SIGNING_SECRET
@@ -27,13 +26,11 @@ def stripe_webhook(request):
         )
     except Exception as e:
         # Invalid payload
-        print("except value msg", str(e))
         return Response(
             {'error message': str(e), "endpoint_secret": endpoint_secret, "sig_header": sig_header, "payload": payload},
             status=status.HTTP_400_BAD_REQUEST)
 
     if event.type == 'payment_intent.succeeded':
-        print("payment_intent", event.type)
         payment_intent = event.data.object  # contains a stripe.PaymentIntent
         payment_intent_id = payment_intent.id
         card_last4_no = None
@@ -54,19 +51,15 @@ def stripe_webhook(request):
             try:
                 try:
                     payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
-                    print("payment_intent","payment_method_id", payment_intent, payment_method_id)
-
                 except Exception as e:
                     print(str(e))
                 try:
                     stripe_subscription = create_subscription_post_payment_intent(customer_id, payment_method_id,
                                                                                   subscription.stripe_price_id)
-                    print('stripe_subscription', stripe_subscription)
                 except Exception as e:
                     print(str(e))
                 try:
                     payment_method = retrieve_payment_method(payment_method_id)
-                    print('payment_method', payment_method)
                 except Exception as e:
                     print(str(e))
                 try:
@@ -100,10 +93,8 @@ def stripe_webhook(request):
                 return Response({'error': str(e)})
 
     if event.type == 'invoice.paid':
-        print("payment_intent", event.type)
         payment_intent = event.data.object
         stripe_Subscription_id = payment_intent.subscription
-        print("stripe_Subscription_id", stripe_Subscription_id)
 
         stripe_customer_id = payment_intent.customer
         try:
@@ -129,8 +120,10 @@ def stripe_webhook(request):
                                               stripe_customer_id=stripe_customer_id, start_date=start_date,
                                               end_date=end_date)
 
+    if event.type == 'invoice.payment_action_required':
+        print("invoice payment action required event", event)
+
     if event.type == 'invoice.payment_failed':
-        print('payment_intent', event.type)
         """payment Failed, Change the subscribed status and app subscribed is In-active"""
         payment_intent = event.data.object
         stripe_subscription_id = payment_intent.subscription

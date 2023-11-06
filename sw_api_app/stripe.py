@@ -157,7 +157,6 @@ def stripe_ephemeral_key(customer_id):
             customer=customer_id,
             stripe_version="2023-08-16",  # Replace with the desired API version
         )
-        print('ephemeral_key', ephemeral_key)
         key = ephemeral_key.secret
         return key
     except Exception as e:
@@ -261,7 +260,7 @@ def create_subscription_post_payment_intent(customer_id, payment_method_id, pric
         # payment_behavior='default_incomplete',
         # collection_method="send_invoice",
         default_payment_method=payment_method_id,
-        expand=["latest_invoice.payment_intent"],
+        expand=["latest_invoice.payment_intent"]
         # customer_action='use_payment_method',
         # payment_settings={
         #     "payment_method_options": {

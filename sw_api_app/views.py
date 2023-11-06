@@ -1845,7 +1845,12 @@ def subscription_payment_intent(request):
                         stripe_intent = stripe.PaymentIntent.create(
                             amount=app_price,
                             currency="usd",
-                            automatic_payment_methods={"enabled": True},
+                            # confirm=True,
+                            # setup_future_usage="off_session",
+                            description="Payment intent created from backend service for the customer",
+                            # automatic_payment_methods={"enabled": True},
+                            capture_method="automatic",
+                            confirmation_method="automatic",
                             customer=stripe_customer_id
                         )
                         stripe_intent_id = stripe_intent['id']

@@ -1873,7 +1873,7 @@ def subscription_payment_intent(request):
                                                            # start_date=start_date,
                                                            # end_date=end_date
                                                            )
-                print("subscription---if", subscription)
+                # print("subscription---if", subscription)
 
                 # print("ephemeral_key", ephemeral_key)
                 return Response({"stripe_payment_intent_id": stripe_intent_id,

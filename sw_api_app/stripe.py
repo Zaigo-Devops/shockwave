@@ -51,6 +51,7 @@ def stripe_webhook(request):
             try:
                 try:
                     payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
+                    attach_payment_method(customer_id, payment_method_id)
                 except Exception as e:
                     print(str(e))
                 try:

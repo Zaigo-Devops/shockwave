@@ -56,17 +56,19 @@ def stripe_webhook(request):
             try:
                 try:
                     payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
-                    try:
-                        payment_method = stripe.PaymentMethod.retrieve(payment_method_id)
-                        if payment_method.customer is None:
-                            payment_method.attach(customer=customer_id)
-                        else:
-                            print("PaymentMethod is already attached to a customer")
-                        # attach_payment_method(customer_id, payment_method_id)
-                        context['payment_method_id'] = payment_method_id
-                    except Exception as e:
-                        context["payment_intent_error_except"] = str(e)
-                        return Response({'payment_method attach error': str(e), "context": context})
+                    context['payment_method_id'] = payment_method_id
+
+                    # try:
+                    #     payment_method = stripe.PaymentMethod.retrieve(payment_method_id)
+                    #     if payment_method.customer is None:
+                    #         payment_method.attach(customer=customer_id)
+                    #     else:
+                    #         print("PaymentMethod is already attached to a customer")
+                    #     # attach_payment_method(customer_id, payment_method_id)
+                    #     context['payment_method_id'] = payment_method_id
+                    # except Exception as e:
+                    #     context["payment_intent_error_except"] = str(e)
+                    #     return Response({'payment_method attach error': str(e), "context": context})
                 except Exception as e:
                     context['payment_method_id'] = payment_method_id
                     return Response({'payment_intent,payment_method_id error': str(e),"context":context})

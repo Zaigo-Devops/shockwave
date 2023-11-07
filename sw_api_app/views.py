@@ -1846,7 +1846,7 @@ def subscription_payment_intent(request):
                             amount=app_price,
                             currency="usd",
                             # confirm=True,
-                            # setup_future_usage="off_session",
+                            setup_future_usage="off_session",
                             description="Payment intent created from backend service for the customer",
                             # automatic_payment_methods={"enabled": True},
                             capture_method="automatic",

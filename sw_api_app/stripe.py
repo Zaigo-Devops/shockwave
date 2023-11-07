@@ -47,6 +47,7 @@ def stripe_webhook(request):
         if subscription:
             try:
                 customer_id = subscription.stripe_customer_id
+                context['customer_id'] = customer_id
             except Exception as e:
                 context['customer_id'] = customer_id
                 print(str(e))
@@ -54,6 +55,7 @@ def stripe_webhook(request):
                 try:
                     payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
                     attach_payment_method(customer_id, payment_method_id)
+                    context['payment_method_id'] = payment_method_id
                 except Exception as e:
                     context['payment_method_id'] = payment_method_id
                     return Response({'payment_intent,payment_method_id error': str(e),"context":context})
@@ -72,6 +74,8 @@ def stripe_webhook(request):
                 try:
                     card_last4_no = payment_method["card"]["last4"]
                     user_id = subscription.user_id
+                    context['card_last4_no'] = card_last4_no
+                    context['user_id'] = user_id
                 except Exception as e:
                     context['card_last4_no'] = card_last4_no
                     context['user_id'] = user_id

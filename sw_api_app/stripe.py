@@ -19,11 +19,12 @@ def stripe_webhook(request):
     sig_header = request.META['HTTP_STRIPE_SIGNATURE']
     endpoint_secret = STRIPE_WEBHOOK_SIGNING_SECRET
     event = None
-
+    resp = {}
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, endpoint_secret
         )
+        resp["event"] = event
     except Exception as e:
         # Invalid payload
         return Response(
@@ -43,19 +44,23 @@ def stripe_webhook(request):
             subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by(
                 '-created_at').first()
         except Exception as e:
-            print(str(e))
+            resp["pi_succeeded_subscription_ex"] = str(e)
         if subscription:
             try:
                 customer_id = subscription.stripe_customer_id
                 context['customer_id'] = customer_id
             except Exception as e:
                 context['customer_id'] = customer_id
-                print(str(e))
+                resp["subscription_exception"] = str(e)
             try:
                 try:
                     payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
-                    attach_payment_method(customer_id, payment_method_id)
-                    context['payment_method_id'] = payment_method_id
+                    try:
+                        attach_payment_method(customer_id, payment_method_id)
+                        context['payment_method_id'] = payment_method_id
+                    except Exception as e:
+                        resp["payment_intent_error_except"] = str(e)
+
                 except Exception as e:
                     context['payment_method_id'] = payment_method_id
                     return Response({'payment_intent,payment_method_id error': str(e),"context":context})
@@ -150,7 +155,7 @@ def stripe_webhook(request):
             subscription.save()
     else:
         print('Unhandled event type {}'.format(event.type))
-    return Response(event, status=status.HTTP_200_OK)
+    return Response(resp, status=status.HTTP_200_OK)
 
 
 def create_payment_customer(name, email, payment_method=None, phone=None):

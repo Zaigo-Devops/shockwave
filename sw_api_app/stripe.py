@@ -29,10 +29,12 @@ def stripe_webhook(request):
         return Response(
             {'error message': str(e), "endpoint_secret": endpoint_secret, "sig_header": sig_header, "payload": payload},
             status=status.HTTP_400_BAD_REQUEST)
-
+    context = {}
     if event.type == 'payment_intent.succeeded':
         payment_intent = event.data.object  # contains a stripe.PaymentIntent
+        context['data'] = payment_intent
         payment_intent_id = payment_intent.id
+        context['payment_intent_id'] = payment_intent_id
         card_last4_no = None
         customer_id = None
         payment_method_id = None
@@ -46,14 +48,15 @@ def stripe_webhook(request):
             try:
                 customer_id = subscription.stripe_customer_id
             except Exception as e:
+                context['customer_id'] = customer_id
                 print(str(e))
-
             try:
                 try:
                     payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
                     attach_payment_method(customer_id, payment_method_id)
                 except Exception as e:
-                    return Response({'payment_intent,payment_method_id error': str(e)})
+                    context['payment_method_id'] = payment_method_id
+                    return Response({'payment_intent,payment_method_id error': str(e),"context":context})
 
                     # print(str(e))
                 try:
@@ -70,7 +73,9 @@ def stripe_webhook(request):
                     card_last4_no = payment_method["card"]["last4"]
                     user_id = subscription.user_id
                 except Exception as e:
-                    return Response({'card,userid error': str(e)})
+                    context['card_last4_no'] = card_last4_no
+                    context['user_id'] = user_id
+                    return Response({'card,userid error': str(e),"context":context})
                 if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
                     PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no,
                                                  user_id=user_id)
@@ -94,7 +99,7 @@ def stripe_webhook(request):
                                                             end_date=end_date)
                 # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
             except Exception as e:
-                return Response({'error': str(e)})
+                return Response({'error': str(e),"context":context})
 
     if event.type == 'invoice.paid':
         payment_intent = event.data.object

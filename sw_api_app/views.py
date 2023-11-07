@@ -1878,7 +1878,7 @@ def subscription_payment_intent(request):
                                                                )
                     # print("subscription---if", subscription)
 
-                    # print("ephemeral_key", ephemeral_key)
+                    print("stripe_intent_id","stripe_customer_id", stripe_intent_id, stripe_customer_id)
                     return Response({"stripe_payment_intent_id": stripe_intent_id,
                                     "subscription_id": subscription.id,
                                      "ephemeral_key": ephemeral_key,

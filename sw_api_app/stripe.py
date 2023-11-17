@@ -288,7 +288,8 @@ def create_subscription_post_payment_intent(customer_id, payment_method_id, pric
         # payment_behavior='default_incomplete',
         # collection_method="send_invoice",
         default_payment_method=payment_method_id,
-        expand=["latest_invoice.payment_intent"]
+        expand=["latest_invoice.payment_intent"],
+        off_session=True,
         # customer_action='use_payment_method',
         # payment_settings={
         #     "payment_method_options": {

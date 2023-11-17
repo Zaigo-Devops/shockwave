@@ -77,6 +77,8 @@ def stripe_webhook(request):
                 try:
                     stripe_subscription = create_subscription_post_payment_intent(customer_id, payment_method_id,
                                                                                   subscription.stripe_price_id)
+                    payment_intent_status = stripe.PaymentIntent.retrieve(stripe_subscription.latest_invoice.payment_intent)
+                    print("payment_intent status", payment_intent.status)
                 except Exception as e:
                     # print(str(e))
                     return Response({'stripe_subscription_error': str(e)})

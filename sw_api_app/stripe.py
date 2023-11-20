@@ -31,110 +31,128 @@ def stripe_webhook(request):
             {'error message': str(e), "endpoint_secret": endpoint_secret, "sig_header": sig_header, "payload": payload},
             status=status.HTTP_400_BAD_REQUEST)
     context = {}
-    # if event.type ==
-    if event.type == 'payment_intent.succeeded':
-        payment_intent = event.data.object  # contains a stripe.PaymentIntent
-        context['data'] = payment_intent
-        payment_intent_id = payment_intent.id
-        context['payment_intent_id'] = payment_intent_id
-        card_last4_no = None
-        customer_id = None
-        payment_method_id = None
-        subscription = None
-        try:
-            subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by(
-                '-created_at').first()
-        except Exception as e:
-            resp["pi_succeeded_subscription_ex"] = str(e)
-        if subscription:
-            try:
-                customer_id = subscription.stripe_customer_id
-                context['customer_id'] = customer_id
-            except Exception as e:
-                context['customer_id'] = customer_id
-                resp["subscription_exception"] = str(e)
-            try:
-                try:
-                    payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
-                    context['payment_method_id'] = payment_method_id
-
-                    # try:
-                    #     payment_method = stripe.PaymentMethod.retrieve(payment_method_id)
-                    #     if payment_method.customer is None:
-                    #         payment_method.attach(customer=customer_id)
-                    #     else:
-                    #         print("PaymentMethod is already attached to a customer")
-                    #     # attach_payment_method(customer_id, payment_method_id)
-                    #     context['payment_method_id'] = payment_method_id
-                    # except Exception as e:
-                    #     context["payment_intent_error_except"] = str(e)
-                    #     return Response({'payment_method attach error': str(e), "context": context})
-                except Exception as e:
-                    context['payment_method_id'] = payment_method_id
-                    return Response({'payment_intent,payment_method_id error': str(e),"context":context})
-
-                    # print(str(e))
-                try:
-                    stripe_subscription = create_subscription_post_payment_intent(customer_id, payment_method_id,
-                                                                                  subscription.stripe_price_id)
-                    payment_intent_status = stripe.PaymentIntent.retrieve(stripe_subscription.latest_invoice.payment_intent)
-                    print("payment_intent status", payment_intent.status)
-                except Exception as e:
-                    # print(str(e))
-                    return Response({'stripe_subscription_error': str(e)})
-                try:
-                    payment_method = retrieve_payment_method(payment_method_id)
-                except Exception as e:
-                    return Response({'stripe_payment_method_error': str(e)})
-                try:
-                    card_last4_no = payment_method["card"]["last4"]
-                    user_id = subscription.user_id
-                    context['card_last4_no'] = card_last4_no
-                    context['user_id'] = user_id
-                except Exception as e:
-                    context['card_last4_no'] = card_last4_no
-                    context['user_id'] = user_id
-                    return Response({'card,userid error': str(e),"context":context})
-                if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
-                    PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no,
-                                                 user_id=user_id)
-                try:
-                    start_date = unix_timestamp_format(stripe_subscription.current_period_start)
-                    end_date = unix_timestamp_format(stripe_subscription.current_period_end)
-                except Exception as e:
-                    start_date = datetime.date.today()
-                    end_date = start_date + datetime.timedelta(days=30)
-                subscription.status = ACTIVE
-                subscription.stripe_subscription_id = stripe_subscription['id']
-                subscription.stripe_payment_id = payment_method_id
-                subscription.payment_id = None
-                subscription.app_subscribed = True
-                subscription.start_date = start_date
-                subscription.end_date = end_date
-                subscription.save()
-                sub_per = SubscriptionPeriod.objects.create(subscription_id=subscription,
-                                                            stripe_subscription_id=stripe_subscription.id,
-                                                            stripe_customer_id=customer_id, start_date=start_date,
-                                                            end_date=end_date)
-                # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
-            except Exception as e:
-                return Response({'error': str(e),"context":context})
+    # if event.type == 'payment_intent.succeeded':
+    #     payment_intent = event.data.object  # contains a stripe.PaymentIntent
+    #     context['data'] = payment_intent
+    #     payment_intent_id = payment_intent.id
+    #     context['payment_intent_id'] = payment_intent_id
+    #     card_last4_no = None
+    #     customer_id = None
+    #     payment_method_id = None
+    #     subscription = None
+    #     try:
+    #         subscription = Subscription.objects.filter(stripe_intent_id=payment_intent_id).order_by(
+    #             '-created_at').first()
+    #     except Exception as e:
+    #         resp["pi_succeeded_subscription_ex"] = str(e)
+    #     if subscription:
+    #         try:
+    #             customer_id = subscription.stripe_customer_id
+    #             context['customer_id'] = customer_id
+    #         except Exception as e:
+    #             context['customer_id'] = customer_id
+    #             resp["subscription_exception"] = str(e)
+    #         try:
+    #             try:
+    #                 payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
+    #                 context['payment_method_id'] = payment_method_id
+    #
+    #                 # try:
+    #                 #     payment_method = stripe.PaymentMethod.retrieve(payment_method_id)
+    #                 #     if payment_method.customer is None:
+    #                 #         payment_method.attach(customer=customer_id)
+    #                 #     else:
+    #                 #         print("PaymentMethod is already attached to a customer")
+    #                 #     # attach_payment_method(customer_id, payment_method_id)
+    #                 #     context['payment_method_id'] = payment_method_id
+    #                 # except Exception as e:
+    #                 #     context["payment_intent_error_except"] = str(e)
+    #                 #     return Response({'payment_method attach error': str(e), "context": context})
+    #             except Exception as e:
+    #                 context['payment_method_id'] = payment_method_id
+    #                 return Response({'payment_intent,payment_method_id error': str(e),"context":context})
+    #
+    #                 # print(str(e))
+    #             try:
+    #                 stripe_subscription = create_subscription_post_payment_intent(customer_id, payment_method_id,
+    #                                                                               subscription.stripe_price_id)
+    #                 payment_intent_status = stripe.PaymentIntent.retrieve(stripe_subscription.latest_invoice.payment_intent)
+    #                 print("payment_intent status", payment_intent.status)
+    #             except Exception as e:
+    #                 # print(str(e))
+    #                 return Response({'stripe_subscription_error': str(e)})
+    #             try:
+    #                 payment_method = retrieve_payment_method(payment_method_id)
+    #             except Exception as e:
+    #                 return Response({'stripe_payment_method_error': str(e)})
+    #             try:
+    #                 card_last4_no = payment_method["card"]["last4"]
+    #                 user_id = subscription.user_id
+    #                 context['card_last4_no'] = card_last4_no
+    #                 context['user_id'] = user_id
+    #             except Exception as e:
+    #                 context['card_last4_no'] = card_last4_no
+    #                 context['user_id'] = user_id
+    #                 return Response({'card,userid error': str(e),"context":context})
+    #             if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
+    #                 PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no,
+    #                                              user_id=user_id)
+    #             try:
+    #                 start_date = unix_timestamp_format(stripe_subscription.current_period_start)
+    #                 end_date = unix_timestamp_format(stripe_subscription.current_period_end)
+    #             except Exception as e:
+    #                 start_date = datetime.date.today()
+    #                 end_date = start_date + datetime.timedelta(days=30)
+    #             subscription.status = ACTIVE
+    #             subscription.stripe_subscription_id = stripe_subscription['id']
+    #             subscription.stripe_payment_id = payment_method_id
+    #             subscription.payment_id = None
+    #             subscription.app_subscribed = True
+    #             subscription.start_date = start_date
+    #             subscription.end_date = end_date
+    #             subscription.save()
+    #             sub_per = SubscriptionPeriod.objects.create(subscription_id=subscription,
+    #                                                         stripe_subscription_id=stripe_subscription.id,
+    #                                                         stripe_customer_id=customer_id, start_date=start_date,
+    #                                                         end_date=end_date)
+    #             # create_subscription_post_payment_intent(customer_id, payment_intent_id, subscription.stripe_price_id)
+    #         except Exception as e:
+    #             return Response({'error': str(e),"context":context})
 
     if event.type == 'invoice.paid':
+        card_last4_no = None
+        user_id = None
         payment_intent = event.data.object
         stripe_Subscription_id = payment_intent.subscription
+        payment_intent_id = payment_intent.payment_intent
+        payment_intent, payment_method_id = retrieve_payment_method_id(payment_intent_id)
 
         stripe_customer_id = payment_intent.customer
+        subscription = Subscription.objects.filter(stripe_subscription_id=stripe_Subscription_id,
+                                                   stripe_customer_id=stripe_customer_id).first()
+        try:
+            payment_method = retrieve_payment_method(payment_method_id)
+        except Exception as e:
+            return Response({'stripe_payment_method_error': str(e)})
+        try:
+            card_last4_no = payment_method["card"]["last4"]
+            user_id = subscription.user_id
+            context['card_last4_no'] = card_last4_no
+            context['user_id'] = user_id
+        except Exception as e:
+            context['card_last4_no'] = card_last4_no
+            context['user_id'] = user_id
+            return Response({'card,userid error': str(e), "context": context})
+        if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
+            PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no,
+                                         user_id=user_id)
+
         try:
             start_date = unix_timestamp_format(payment_intent.lines.data[0].period.start)
             end_date = unix_timestamp_format(payment_intent.lines.data[0].period.end)
         except:
             start_date = datetime.date.today()
             end_date = start_date + datetime.timedelta(days=30)
-
-        subscription = Subscription.objects.filter(stripe_subscription_id=stripe_Subscription_id,
-                                                   stripe_customer_id=stripe_customer_id).first()
-        print("subscription", subscription)
 
         if subscription:
             """After payment successful, Change the subscribed status and app subscribed is active"""
@@ -147,9 +165,6 @@ def stripe_webhook(request):
                                               stripe_subscription_id=stripe_Subscription_id,
                                               stripe_customer_id=stripe_customer_id, start_date=start_date,
                                               end_date=end_date)
-
-    if event.type == 'invoice.payment_action_required':
-        print("invoice payment action required event", event)
 
     if event.type == 'invoice.payment_failed':
         """payment Failed, Change the subscribed status and app subscribed is In-active"""

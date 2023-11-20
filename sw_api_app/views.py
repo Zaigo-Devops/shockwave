@@ -1832,9 +1832,12 @@ def subscription_payment_intent(request):
                                                             app_subscribed=True,
                                                             status=1).exists()
             if not is_app_subscribed:
+                stripe_subscription_id = None
+                stripe_intent_id = None
+                stripe_client_secret_id = None
                 if stripe_customer_id:
                     stripe_product_id = create_product(product_name=user_unique_indentifer,
-                                                       description=f'For {user.first_name},unique identifier {user_unique_indentifer}  is '
+                                                       description=f'For {user.first_name},unique identifier {user_unique_indentifer} is '
                                                                    f'registered for App.')['id']
                     app_price = app_price_update()
                     stripe_product_price_id = \
@@ -1842,23 +1845,37 @@ def subscription_payment_intent(request):
                                      product_id=stripe_product_id)['id']
                     exception_message = None
                     try:
-                        stripe_intent = stripe.PaymentIntent.create(
-                            amount=app_price,
-                            currency="usd",
-                            # confirm=True,
-                            setup_future_usage="off_session",
-                            description="Payment intent created from backend service for the customer",
-                            # automatic_payment_methods={"enabled": True},
-                            capture_method="automatic",
-                            confirmation_method="automatic",
-                            customer=stripe_customer_id
+                        # stripe_intent = stripe.PaymentIntent.create(
+                        #     amount=app_price,
+                        #     currency="usd",
+                        #     # confirm=True,
+                        #     setup_future_usage="off_session",
+                        #     description="Payment intent created from backend service for the customer",
+                        #     # automatic_payment_methods={"enabled": True},
+                        #     capture_method="automatic",
+                        #     confirmation_method="automatic",
+                        #     customer=stripe_customer_id
+                        # )
+                        # stripe_intent_id = stripe_intent['id']
+                        # stripe_client_secret_id = stripe_intent['client_secret']
+                        # # print("stripe payment intent", stripe_intent)
+                        stripe_subscription = stripe.Subscription.create(
+                            customer=stripe_customer_id,
+                            items=[{"price": stripe_product_price_id}],
+                            payment_behavior='default_incomplete',
+                            payment_settings={'save_default_payment_method': 'on_subscription'},
+                            expand=['latest_invoice.payment_intent'],
+                            # coupon=user_card_details['coupon'],
+                            metadata={
+                                "customer_id": stripe_customer_id,
+                                'new_subscription': 'true'
+                            }
                         )
-                        stripe_intent_id = stripe_intent['id']
-                        stripe_client_secret_id = stripe_intent['client_secret']
-                        # print("stripe payment intent", stripe_intent)
+                        stripe_client_secret_id = stripe_subscription['latest_invoice']['payment_intent']['client_secret']
+                        stripe_intent_id = stripe_subscription['latest_invoice']['payment_intent']['id']
+                        stripe_subscription_id = stripe_subscription['id']
+
                     except Exception as e:
-                        stripe_intent_id = None
-                        stripe_client_secret_id = None
                         exception_message = str(e)
                     # if user_profile.stripe_ephemeral_key:
                     #     ephemeral_key = user_profile.stripe_ephemeral_key
@@ -1866,7 +1883,7 @@ def subscription_payment_intent(request):
                     #     ephemeral_key = stripe_ephemeral_key(stripe_customer_id)
                     subscription = Subscription.objects.create(status=INACTIVE, user_id=user,
                                                                app_subscribed=False,
-                                                               # stripe_subscription_id=stripe_Subscription_id['id'],
+                                                               stripe_subscription_id=stripe_subscription_id,
                                                                stripe_customer_id=stripe_customer_id,
                                                                stripe_price_id=stripe_product_price_id,
                                                                stripe_product_id=stripe_product_id,
@@ -1876,15 +1893,14 @@ def subscription_payment_intent(request):
                                                                # start_date=start_date,
                                                                # end_date=end_date
                                                                )
-                    # print("subscription---if", subscription)
 
-                    print("stripe_intent_id","stripe_customer_id", stripe_intent_id, stripe_customer_id)
                     return Response({"stripe_payment_intent_id": stripe_intent_id,
                                     "subscription_id": subscription.id,
                                      "ephemeral_key": ephemeral_key,
                                      "customer_id": stripe_customer_id,
+                                     "stripe_subscription_id": stripe_subscription_id,
                                      "stripe_client_secret": stripe_client_secret_id,
-                                     "message": "Payment Intent created successfully",
+                                     "message": "Subscription created successfully",
                                      "payment_intent_message": exception_message}, status=status.HTTP_200_OK)
                 return Response({"message": "Please provide valid data"}, status=status.HTTP_204_NO_CONTENT)
             else:

@@ -228,14 +228,19 @@ def is_device_registration(request):
                                  # subscription_end_date This used for offline api,when the subscription is end
                                  # for user.
                                  "subscription_end_date": subscription.end_date,
-                                 "stripe_subscription_id": subscription.stripe_subscription_id}, status=status.HTTP_200_OK)
+                                 "stripe_subscription_id": subscription.stripe_subscription_id,
+                                 "android_version": "20",
+                                 "iOS_version": "5"
+                                 }, status=status.HTTP_200_OK)
         else:
             return Response({"is_subscribed": False,
                              "device_price": app_price.price,
                              "duration": duration,
                              # subscription_end_date This used for offline api,when the subscription is end for
                              # user.
-                             "subscription_end_date": subscription.end_date if subscription else None},
+                             "subscription_end_date": subscription.end_date if subscription else None,
+                             "android_version": "20",
+                             "iOS_version": "5"},
                             status=status.HTTP_200_OK)
     # except Exception as e:
     #     return Response({"is_subscribed": False, "message": str(e), "error": str(e)},

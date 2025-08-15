@@ -55,7 +55,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         validators=[UniqueValidator(queryset=User.objects.all(), message="Email already exists.")]
     )
     password = serializers.CharField(
-        write_only=True, required=True, validators=[validate_password])
+        write_only=True, required=True)
     password2 = serializers.CharField(write_only=True, required=True)
     insurance_provider = serializers.CharField(source="user_profile.insurance_provider", allow_blank=True,
                                                allow_null=True, required=False, default=None, max_length=256)

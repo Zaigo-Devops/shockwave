@@ -140,9 +140,9 @@ def stripe_webhook(request):
             context['card_last4_no'] = card_last4_no
             context['user_id'] = user_id
         except Exception as e:
-            context['card_last4_no'] = card_last4_no
+            context['card_last4_no'] = "notc"
             context['user_id'] = user_id
-            return Response({'card,userid error': str(e), "context": context})
+            # return Response({'card,userid error': str(e), "context": context})
         if not PaymentMethod.objects.filter(payment_id=payment_method_id).first():
             PaymentMethod.objects.create(payment_id=payment_method_id, card_last4_no=card_last4_no,
                                          user_id=user_id)

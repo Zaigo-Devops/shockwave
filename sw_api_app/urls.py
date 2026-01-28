@@ -44,5 +44,5 @@ urlpatterns = [
     path('offline/session/session_data/save', views.offline_session_sessiondata_save),
     path('subscription_intent/', views.subscription_payment_intent),
     path('activate_subscription/', views.activate_subscription),
-    path('verify-google-purchase/', inapp_views.verify_and_activate_purchase),
+    path('verify-google-purchase', inapp_views.verify_and_activate_purchase),
 ]

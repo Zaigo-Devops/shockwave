@@ -137,13 +137,20 @@ class PurchaseVerificationSerializer(serializers.Serializer):
     """
     Serializer for verifying purchase and activating subscription
     """
+    token = serializers.CharField(
+        help_text="Purchase token received from Google Play Billing"
+    ) 
+
+    platform = serializers.CharField(
+        max_length=255,
+        help_text="Platform of the purchase, e.g., 'google_play'"
+    )
+
     product_id = serializers.CharField(
         max_length=255,
         help_text="Product ID or Subscription ID from Google Play Console"
     )
-    purchase_token = serializers.CharField(
-        help_text="Purchase token received from Google Play Billing"
-    )
+    
     user_id = serializers.CharField(
         max_length=255,
         required=False,

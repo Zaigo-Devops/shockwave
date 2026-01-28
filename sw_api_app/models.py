@@ -23,7 +23,8 @@ class InAppPurchase(models.Model):
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True, blank=True)
     purchase_type = models.CharField(max_length=20, choices=PURCHASE_TYPES,default='pending')
     product_id = models.CharField(max_length=255,blank=True, null=True,default=None)
-    purchase_token = models.TextField(max_length=255,blank=True, null=True,default=None)    
+    purchase_token = models.TextField(max_length=255,blank=True, null=True,default=None)
+    platform = models.CharField(max_length=50, default='google_play')  
     # Purchase details
     purchase_time = models.DateTimeField()
     purchase_price = models.FloatField(default=0, null=True)

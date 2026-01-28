@@ -84,14 +84,13 @@ class PurchaseProcessor:
     def __init__(self):
         self.play_service = GooglePlayService()
     
-    def process_product_purchase(self, user, product_id, purchase_token, order_id=None):
+    def process_product_purchase(self, token, platform, product_id, user_id=None):
         """Process in-app product purchase"""
         from .models import InAppPurchase
         
         try:
             # Verify with Google
-            verification = self.play_service.verify_purchase(product_id, purchase_token)
-            
+            verification = self.play_service.verify_purchase(product_id, token)
             if not verification['valid']:
                 return {
                     'success': False,
@@ -102,7 +101,7 @@ class PurchaseProcessor:
             data = verification['data']
             
             # Check if already processed
-            if InAppPurchase.objects.filter(purchase_token=purchase_token).exists():
+            if InAppPurchase.objects.filter(purchase_token=token).exists():
                 return {
                     'success': False,
                     'error': 'Purchase already processed'
@@ -110,13 +109,14 @@ class PurchaseProcessor:
             
             # Create purchase record
             purchase = InAppPurchase.objects.create(
-                user_id=user,
+                user_id=user_id,
                 product_id=product_id,
-                purchase_token=purchase_token,
+                purchase_token=token,
                 purchase_time=datetime.fromtimestamp(int(data.get('purchaseTimeMillis', 0)) / 1000),
                 purchase_type='subscribed',
                 status='completed',
-                verified=True
+                verified=True,
+                is_subscribed=False # Will be updated upon subscription activation
             )
             
             # # Acknowledge purchase if not already acknowledged
@@ -135,13 +135,15 @@ class PurchaseProcessor:
                 'details': str(e)
             }
     
-    def process_subscription(self, user, subscription_id, purchase_token):
+    def process_subscription(self, user, product_id, purchase_token):
         """Process subscription purchase"""
         from .models import InAppPurchase
         
         try:
             # Verify with Google
-            verification = self.play_service.verify_subscription(subscription_id, purchase_token)
+            # Note: We pass product_id, but Google API calls it 'subscriptionId'
+
+            verification = self.play_service.verify_subscription(product_id, purchase_token)
             
             if not verification['valid']:
                 return {
@@ -153,24 +155,35 @@ class PurchaseProcessor:
             data = verification['data']
             
             # Create or update subscription record in InAppPurchase
-            subscription, created = InAppPurchase.objects.update_or_create(
-                user_id=user,
-                subscription_id=subscription_id,
-                purchase_token=purchase_token,
-                defaults={
-                    'purchase_type': 'subscribed',
-                    'purchase_time': datetime.fromtimestamp(int(data.get('startTimeMillis', 0)) / 1000),
-                    'expiry_time': datetime.fromtimestamp(int(data.get('expiryTimeMillis', 0)) / 1000),
-                    'auto_renewing': data.get('autoRenewing', False),
-                    'status': 'completed' if data.get('paymentState', 0) == 1 else 'pending',
-                    'verified': True
-                }
-            )
+            try:
+                purchase = InAppPurchase.objects.get(
+                    user_id=user,
+                    purchase_token=purchase_token
+                )
+                
+            except InAppPurchase.DoesNotExist:
+                # If purchase doesn't exist, create it (shouldn't happen in normal flow)
+                purchase = InAppPurchase.objects.create(
+                    user_id=user,
+                    product_id=product_id,
+                    purchase_token=purchase_token,
+                    purchase_time=datetime.fromtimestamp(int(data.get('startTimeMillis', 0)) / 1000),
+                    purchase_type='subscribed',
+                    status='completed',
+                    verified=True
+                )
             
+            # Update with subscription details
+            purchase.is_subscribed = True
+            purchase.subscription_id = product_id  # Store the subscription product ID
+            purchase.expiry_time = datetime.fromtimestamp(int(data.get('expiryTimeMillis', 0)) / 1000)
+            purchase.auto_renewing = data.get('autoRenewing', False)
+            purchase.status = 'completed' if data.get('paymentState', 0) == 1 else 'pending'
+            purchase.save()
+           
             return {
                 'success': True,
-                'subscription': subscription,
-                'created': created
+                'subscription': purchase,
             }
             
         except Exception as e:

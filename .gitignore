@@ -6,5 +6,5 @@ media
 logs
 .env
 .vscode
-shock_env
+env
 .idea

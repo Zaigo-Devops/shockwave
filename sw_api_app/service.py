@@ -1,0 +1,181 @@
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from datetime import datetime
+import logging
+
+from SHOCK_WAVE import settings
+
+
+
+class GooglePlayService:
+    SCOPES = ['https://www.googleapis.com/auth/androidpublisher']
+    
+    def __init__(self):
+        self.package_name = settings.GOOGLE_PACKAGE_NAME
+        self.service = self._get_service()
+    
+    def _get_service(self):
+        """Initialize Google Play Developer API service"""
+        try:
+            credentials = service_account.Credentials.from_service_account_file(
+                settings.GOOGLE_SERVICE_ACCOUNT_FILE,
+                scopes=self.SCOPES
+            )
+            service = build('androidpublisher', 'v3', credentials=credentials)
+            return service  # Return service object, not Response
+        except Exception as e:
+            raise
+    
+    def verify_purchase(self, product_id, purchase_token):
+        """Verify in-app product purchase"""
+        try:
+            result = self.service.purchases().products().get(
+                packageName=self.package_name,
+                productId=product_id,
+                token=purchase_token
+            ).execute()
+            
+            # Return dictionary, not Response
+            return {
+                'valid': True,
+                'data': result
+            }
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': str(e)
+            }
+    
+    def verify_subscription(self, subscription_id, purchase_token):
+        """Verify subscription purchase"""
+        try:
+            result = self.service.purchases().subscriptions().get(
+                packageName=self.package_name,
+                subscriptionId=subscription_id,
+                token=purchase_token
+            ).execute()
+            
+            return {
+                'valid': True,
+                'data': result
+            }
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': str(e)
+            }
+    
+    def acknowledge_purchase(self, product_id, purchase_token):
+        """Acknowledge in-app product purchase"""
+        try:
+            self.service.purchases().products().acknowledge(
+                packageName=self.package_name,
+                productId=product_id,
+                token=purchase_token
+            ).execute()
+            return True
+        except Exception as e:
+            return False
+
+
+class PurchaseProcessor:
+    """Process and validate purchases"""
+    
+    def __init__(self):
+        self.play_service = GooglePlayService()
+    
+    def process_product_purchase(self, user, product_id, purchase_token, order_id=None):
+        """Process in-app product purchase"""
+        from .models import InAppPurchase
+        
+        try:
+            # Verify with Google
+            verification = self.play_service.verify_purchase(product_id, purchase_token)
+            
+            if not verification['valid']:
+                return {
+                    'success': False,
+                    'error': 'Purchase verification failed',
+                    'details': verification.get('error')
+                }
+            
+            data = verification['data']
+            
+            # Check if already processed
+            if InAppPurchase.objects.filter(purchase_token=purchase_token).exists():
+                return {
+                    'success': False,
+                    'error': 'Purchase already processed'
+                }
+            
+            # Create purchase record
+            purchase = InAppPurchase.objects.create(
+                user_id=user,
+                product_id=product_id,
+                purchase_token=purchase_token,
+                purchase_time=datetime.fromtimestamp(int(data.get('purchaseTimeMillis', 0)) / 1000),
+                purchase_type='subscribed',
+                status='completed',
+                verified=True
+            )
+            
+            # # Acknowledge purchase if not already acknowledged
+            # if data.get('acknowledgementState') == 0:
+            #     self.play_service.acknowledge_purchase(product_id, purchase_token)
+            
+            return {
+                'success': True,
+                'purchase': purchase
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': 'Failed to process purchase',
+                'details': str(e)
+            }
+    
+    def process_subscription(self, user, subscription_id, purchase_token):
+        """Process subscription purchase"""
+        from .models import InAppPurchase
+        
+        try:
+            # Verify with Google
+            verification = self.play_service.verify_subscription(subscription_id, purchase_token)
+            
+            if not verification['valid']:
+                return {
+                    'success': False,
+                    'error': 'Subscription verification failed',
+                    'details': verification.get('error')
+                }
+            
+            data = verification['data']
+            
+            # Create or update subscription record in InAppPurchase
+            subscription, created = InAppPurchase.objects.update_or_create(
+                user_id=user,
+                subscription_id=subscription_id,
+                purchase_token=purchase_token,
+                defaults={
+                    'purchase_type': 'subscribed',
+                    'purchase_time': datetime.fromtimestamp(int(data.get('startTimeMillis', 0)) / 1000),
+                    'expiry_time': datetime.fromtimestamp(int(data.get('expiryTimeMillis', 0)) / 1000),
+                    'auto_renewing': data.get('autoRenewing', False),
+                    'status': 'completed' if data.get('paymentState', 0) == 1 else 'pending',
+                    'verified': True
+                }
+            )
+            
+            return {
+                'success': True,
+                'subscription': subscription,
+                'created': created
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': 'Failed to process subscription',
+                'details': str(e)
+            }

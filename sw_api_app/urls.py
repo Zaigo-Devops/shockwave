@@ -5,6 +5,8 @@ from rest_framework import routers
 from sw_api_app.stripe import stripe_webhook
 from . import views
 from .views import *
+from .inapp_views import *
+from sw_api_app import inapp_views
 
 router = routers.DefaultRouter()
 router.register('billing_address', viewset=BillingAddressViewSet)
@@ -42,4 +44,5 @@ urlpatterns = [
     path('offline/session/session_data/save', views.offline_session_sessiondata_save),
     path('subscription_intent/', views.subscription_payment_intent),
     path('activate_subscription/', views.activate_subscription),
+    path('verify-google-purchase/', inapp_views.verify_and_activate_purchase),
 ]

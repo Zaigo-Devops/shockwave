@@ -5,6 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 
 from SHOCK_WAVE import settings
 from sw_admin_app.models import UserProfile, BillingAddress, Device, Subscription
+from sw_api_app.models import InAppPurchase
 from .stripe import create_payment_customer, stripe_ephemeral_key
 from sw_api_app.utils import get_attachment_from_name
 
@@ -128,3 +129,56 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = "__all__"
+
+
+
+
+class PurchaseVerificationSerializer(serializers.Serializer):
+    """
+    Serializer for verifying purchase and activating subscription
+    """
+    product_id = serializers.CharField(
+        max_length=255,
+        help_text="Product ID or Subscription ID from Google Play Console"
+    )
+    purchase_token = serializers.CharField(
+        help_text="Purchase token received from Google Play Billing"
+    )
+    user_id = serializers.CharField(
+        max_length=255,
+        required=False,
+        help_text="Optional user identifier for tracking"
+    )
+
+
+class PurchaseSerializer(serializers.ModelSerializer):
+    """
+    Serializer for InAppPurchase model
+    """
+    # user_email = serializers.SerializerMethodField()
+    # username = serializers.SerializerMethodField()
+    # days_remaining = serializers.SerializerMethodField()
+    # is_active = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = InAppPurchase
+        fields = [
+            'id',
+            'user_id',
+            'purchase_type',
+            'product_id',
+            'purchase_token',
+            'purchase_time',
+            'purchase_price',
+            'purchase_currency',
+            'status',
+            'verified',
+            'expiry_time',
+            'auto_renewing',
+            'is_active',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = fields
+
+

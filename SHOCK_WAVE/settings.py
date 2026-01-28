@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,7 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'django_filters',
-    'corsheaders'
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -203,3 +204,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PUBLISHABLE_KEY = str(os.getenv('PUBLISHABLE_KEY'))
 STRIPE_SECRET_KEY = str(os.getenv('STRIPE_SECRET_KEY'))
 STRIPE_WEBHOOK_SIGNING_SECRET = str(os.getenv('STRIPE_WEBHOOK_SIGNING_SECRET'))
+
+
+# Google Play IAP Configuration
+GOOGLE_SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, config('GOOGLE_SERVICE_ACCOUNT_FILE'))
+GOOGLE_PACKAGE_NAME = config('GOOGLE_PACKAGE_NAME')

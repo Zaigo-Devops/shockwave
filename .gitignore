@@ -8,3 +8,4 @@ logs
 .vscode
 env
 .idea
+service_account.json

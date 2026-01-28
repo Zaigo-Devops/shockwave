@@ -26,7 +26,7 @@ class GooglePlayService:
             service = build('androidpublisher', 'v3', credentials=credentials)
             return service  # Return service object, not Response
         except Exception as e:
-            raise
+            print(f"Error initializing Google Play service: {e}")
     
     def verify_purchase(self, product_id, purchase_token):
         """Verify in-app product purchase"""

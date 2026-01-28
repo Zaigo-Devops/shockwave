@@ -18,7 +18,7 @@ class GooglePlayService:
         """Initialize Google Play Developer API service"""
         try:
             credentials = service_account.Credentials.from_service_account_file(
-                settings.GOOGLE_SERVICE_ACCOUNT_FILE,
+                settings.service_account_info,
                 scopes=self.SCOPES
             )
             service = build('androidpublisher', 'v3', credentials=credentials)

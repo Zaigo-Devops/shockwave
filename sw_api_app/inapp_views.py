@@ -30,8 +30,9 @@ def verify_and_activate_purchase(request):
         "user_id": "user_identifier"  # optional
     }
     """
+    print("api called")
     serializer = PurchaseVerificationSerializer(data=request.data)
-    
+    print("Received data for purchase verification:", request.data)
     if not serializer.is_valid():
         return Response(
             {'error': 'Invalid data', 'details': serializer.errors},
@@ -39,7 +40,7 @@ def verify_and_activate_purchase(request):
         )
     
     processor = PurchaseProcessor()
-    
+    print("Starting purchase processing...",processor)
     try:
         with transaction.atomic():
             # Step 1: Process and verify the purchase
@@ -49,6 +50,7 @@ def verify_and_activate_purchase(request):
                 product_id=serializer.validated_data['product_id'],
                 user_id=serializer.validated_data.get('user_id')
             )
+            print("Purchase processing result:", purchase_result)
             
             if not purchase_result['success']:
                 return Response({
@@ -63,7 +65,7 @@ def verify_and_activate_purchase(request):
                 subscription_id=serializer.validated_data['product_id'],
                 purchase_token=serializer.validated_data['token']
             )
-            
+            print("Subscription processing result:", subscription_result)
             if not subscription_result['success']:
                 # Purchase was created but subscription failed
                 return Response({
@@ -75,7 +77,7 @@ def verify_and_activate_purchase(request):
             
             # Step 3: Both purchase and subscription successful
             purchase_serializer = PurchaseSerializer(subscription_result['subscription'])
-            
+            print("Final purchase and subscription data:", purchase_serializer.data)
             return Response({
                 'success': True,
                 'message': 'Purchase verified and subscription activated successfully',

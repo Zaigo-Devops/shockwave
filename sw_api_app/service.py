@@ -30,13 +30,14 @@ class GooglePlayService:
     
     def verify_purchase(self, product_id, purchase_token):
         """Verify in-app product purchase"""
+        print("Verifying purchase for product_id:", product_id, "with token:", purchase_token)
         try:
             result = self.service.purchases().products().get(
                 packageName=self.package_name,
                 productId=product_id,
                 token=purchase_token
             ).execute()
-            
+            print("Verification result:", result)
             # Return dictionary, not Response
             return {
                 'valid': True,
@@ -99,7 +100,7 @@ class PurchaseProcessor:
                     'error': 'Purchase verification failed',
                     'details': verification.get('error')
                 }
-            
+            print("Verification data:", verification)
             data = verification['data']
             
             # Check if already processed
@@ -144,24 +145,25 @@ class PurchaseProcessor:
         try:
             # Verify with Google
             # Note: We pass product_id, but Google API calls it 'subscriptionId'
-
+            print("Processing subscription for product_id:", product_id, "with token:", purchase_token)
             verification = self.play_service.verify_subscription(product_id, purchase_token)
-            
+            print("Subscription verification result:", verification)
             if not verification['valid']:
                 return {
                     'success': False,
                     'error': 'Subscription verification failed',
                     'details': verification.get('error')
                 }
-            
+            print("Subscription verification data:", verification)
             data = verification['data']
-            
+            print("Subscription data:", data)
             # Create or update subscription record in InAppPurchase
             try:
                 purchase = InAppPurchase.objects.get(
                     user_id=user,
                     purchase_token=purchase_token
                 )
+                print("Found existing purchase record:", purchase)
                 
             except InAppPurchase.DoesNotExist:
                 # If purchase doesn't exist, create it (shouldn't happen in normal flow)
@@ -174,7 +176,7 @@ class PurchaseProcessor:
                     status='completed',
                     verified=True
                 )
-            
+                print("Created new purchase record for subscription:", purchase)
             # Update with subscription details
             purchase.is_subscribed = True
             purchase.subscription_id = product_id  # Store the subscription product ID
@@ -182,7 +184,7 @@ class PurchaseProcessor:
             purchase.auto_renewing = data.get('autoRenewing', False)
             purchase.status = 'completed' if data.get('paymentState', 0) == 1 else 'pending'
             purchase.save()
-           
+            print("Updated purchase record:", purchase)
             return {
                 'success': True,
                 'subscription': purchase,

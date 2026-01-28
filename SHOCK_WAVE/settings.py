@@ -15,8 +15,6 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
-from decouple import config
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -211,10 +209,16 @@ STRIPE_WEBHOOK_SIGNING_SECRET = str(os.getenv('STRIPE_WEBHOOK_SIGNING_SECRET'))
 
 # Google Play IAP Configuration
 # GOOGLE_SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, config('GOOGLE_SERVICE_ACCOUNT_FILE'))
-GOOGLE_PACKAGE_NAME = config('GOOGLE_PACKAGE_NAME')
+GOOGLE_PACKAGE_NAME = str(os.getenv('PUBLISHABLE_KEY'))
 
-encoded = os.getenv("PLAY_SERVICE_ACCOUNT_BASE64")
+# encoded = os.getenv("PLAY_SERVICE_ACCOUNT_BASE64")
 
-service_account_info = json.loads(
-    base64.b64decode(encoded).decode("utf-8")
-)
+# service_account_info = json.loads(
+#     base64.b64decode(
+#         os.environ["PLAY_SERVICE_ACCOUNT_BASE64"]
+#     ).decode("utf-8")
+# )
+
+import os, base64
+
+service_account_info = base64.b64decode(os.environ["PLAY_SERVICE_ACCOUNT_BASE64"]).decode("utf-8")

@@ -9,11 +9,14 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
+import base64
+import json
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 from decouple import config
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -207,5 +210,11 @@ STRIPE_WEBHOOK_SIGNING_SECRET = str(os.getenv('STRIPE_WEBHOOK_SIGNING_SECRET'))
 
 
 # Google Play IAP Configuration
-GOOGLE_SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, config('GOOGLE_SERVICE_ACCOUNT_FILE'))
+# GOOGLE_SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, config('GOOGLE_SERVICE_ACCOUNT_FILE'))
 GOOGLE_PACKAGE_NAME = config('GOOGLE_PACKAGE_NAME')
+
+encoded = os.getenv("PLAY_SERVICE_ACCOUNT_BASE64")
+
+service_account_info = json.loads(
+    base64.b64decode(encoded).decode("utf-8")
+)

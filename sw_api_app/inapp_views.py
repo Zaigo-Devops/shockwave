@@ -43,29 +43,14 @@ def verify_and_activate_purchase(request):
     print("Starting purchase processing...",processor)
     try:
         with transaction.atomic():
-            # Step 1: Process and verify the purchase
-            purchase_result = processor.process_product_purchase(
-                purchase_token=serializer.validated_data['token'],
+            print("comes in s")
+            # Step 2: Purchase verified successfully, now activate subscription
+            subscription_result = processor.process_subscription(
+                token=serializer.validated_data['token'],
                 platform=serializer.validated_data['platform'],
                 product_id=serializer.validated_data['product_id'],
                 user_id=serializer.validated_data.get('user_id')
             )
-            print("Purchase processing result:", purchase_result)
-            
-            if not purchase_result['success']:
-                return Response({
-                    'success': False,
-                    'error': purchase_result['error'],
-                    'details': purchase_result.get('details')
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Step 2: Purchase verified successfully, now activate subscription
-            subscription_result = processor.process_subscription(
-                user=request.user,
-                subscription_id=serializer.validated_data['product_id'],
-                purchase_token=serializer.validated_data['token']
-            )
-            print("Subscription processing result:", subscription_result)
             if not subscription_result['success']:
                 # Purchase was created but subscription failed
                 return Response({
@@ -81,10 +66,6 @@ def verify_and_activate_purchase(request):
             return Response({
                 'success': True,
                 'message': 'Purchase verified and subscription activated successfully',
-                'purchase': purchase_serializer.data,
-                'is_subscribed': subscription_result['subscription'].is_subscribed,
-                'subscription': purchase_serializer.data,
-                'created': subscription_result['created']
             }, status=status.HTTP_201_CREATED)
     
     except Exception as e:

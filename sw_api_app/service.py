@@ -28,16 +28,14 @@ class GooglePlayService:
         except Exception as e:
             print(f"Error initializing Google Play service: {e}")
     
-    def verify_purchase(self, product_id, purchase_token):
+    def verify_purchase(self, product_id, token):
         """Verify in-app product purchase"""
-        print("Verifying purchase for product_id:", product_id, "with token:", purchase_token)
         try:
             result = self.service.purchases().products().get(
                 packageName=self.package_name,
                 productId=product_id,
-                token=purchase_token
+                token=token
             ).execute()
-            print("Verification result:", result)
             # Return dictionary, not Response
             return {
                 'valid': True,
@@ -100,7 +98,6 @@ class PurchaseProcessor:
                     'error': 'Purchase verification failed',
                     'details': verification.get('error')
                 }
-            print("Verification data:", verification)
             data = verification['data']
             
             # Check if already processed
@@ -121,11 +118,7 @@ class PurchaseProcessor:
                 verified=True,
                 is_subscribed=False # Will be updated upon subscription activation
             )
-            
-            # # Acknowledge purchase if not already acknowledged
-            # if data.get('acknowledgementState') == 0:
-            #     self.play_service.acknowledge_purchase(product_id, purchase_token)
-            
+        
             return {
                 'success': True,
                 'purchase': purchase
@@ -138,39 +131,36 @@ class PurchaseProcessor:
                 'details': str(e)
             }
     
-    def process_subscription(self, user, product_id, purchase_token):
+    def process_subscription(self, token, platform, product_id, user_id=None):
         """Process subscription purchase"""
         from .models import InAppPurchase
         
         try:
             # Verify with Google
             # Note: We pass product_id, but Google API calls it 'subscriptionId'
-            print("Processing subscription for product_id:", product_id, "with token:", purchase_token)
-            verification = self.play_service.verify_subscription(product_id, purchase_token)
-            print("Subscription verification result:", verification)
+            verification = self.play_service.verify_subscription(product_id, token)
+
             if not verification['valid']:
                 return {
                     'success': False,
                     'error': 'Subscription verification failed',
                     'details': verification.get('error')
                 }
-            print("Subscription verification data:", verification)
             data = verification['data']
-            print("Subscription data:", data)
             # Create or update subscription record in InAppPurchase
             try:
+                print(type(user_id),token,product_id,"========================")
+
                 purchase = InAppPurchase.objects.get(
-                    user_id=user,
-                    purchase_token=purchase_token
+                    user_id=user_id,
+                    purchase_token=token
                 )
-                print("Found existing purchase record:", purchase)
                 
             except InAppPurchase.DoesNotExist:
                 # If purchase doesn't exist, create it (shouldn't happen in normal flow)
                 purchase = InAppPurchase.objects.create(
-                    user_id=user,
                     product_id=product_id,
-                    purchase_token=purchase_token,
+                    purchase_token=token,
                     purchase_time=datetime.fromtimestamp(int(data.get('startTimeMillis', 0)) / 1000),
                     purchase_type='subscribed',
                     status='completed',

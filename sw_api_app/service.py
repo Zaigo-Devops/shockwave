@@ -77,6 +77,18 @@ class GooglePlayService:
             return True
         except Exception as e:
             return False
+    
+    def acknowledge_subscription(self, product_id, purchase_token):
+        """Acknowledge subscription (REQUIRED within 3 days!)"""
+        try:
+            self.service.purchases().subscriptions().acknowledge(
+                packageName=self.package_name,
+                subscriptionId=product_id,
+                token=purchase_token
+            ).execute()
+            return True
+        except Exception as e:
+            return False
 
 
 class PurchaseProcessor:
@@ -197,6 +209,9 @@ class PurchaseProcessor:
             purchase.save()
             print("Updated purchase record:", purchase)
             
+            if data.get('acknowledgementState', 0) == 0 and payment_state == 1:
+                self.play_service.acknowledge_subscription(product_id, token)
+
             return {
                 'success': True,
                 'subscription': purchase,

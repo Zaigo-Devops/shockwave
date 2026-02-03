@@ -51,6 +51,7 @@ def verify_and_activate_purchase(request):
                 product_id=serializer.validated_data['product_id'],
                 user_id=serializer.validated_data.get('user_id')
             )
+
             if not subscription_result['success']:
                 # Purchase was created but subscription failed
                 return Response({
@@ -60,13 +61,33 @@ def verify_and_activate_purchase(request):
                     'details': subscription_result.get('details')
                 }, status=status.HTTP_400_BAD_REQUEST)
             
+
+            status_value = subscription_result.get('status', 'unknown')
+
             # Step 3: Both purchase and subscription successful
             purchase_serializer = PurchaseSerializer(subscription_result['subscription'])
-            print("Final purchase and subscription data:", purchase_serializer.data)
-            return Response({
+
+            response_data = {
                 'success': True,
-                'message': 'Purchase verified and subscription activated successfully',
-            }, status=status.HTTP_201_CREATED)
+                'data': purchase_serializer.data,
+                # 'is_subscribed': subscription_result['subscription'].is_subscribed,
+            }
+
+            if status_value == 'completed':
+                response_data['message'] = 'Subscription verified and activated successfully'
+                return Response(response_data, status=status.HTTP_201_CREATED)
+            
+            elif status_value == 'trial':
+                # Free trial active
+                response_data['message'] = 'Free trial activated successfully'
+                return Response(response_data, status=status.HTTP_201_CREATED)
+            
+            elif status_value == 'pending':
+                response_data['message'] = 'Subscription created but payment is pending'
+                return Response(response_data, status=status.HTTP_202_ACCEPTED)
+            else:
+                response_data['message'] = 'Subscription created but status is unknown'
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
     
     except Exception as e:
         return Response({

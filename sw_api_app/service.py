@@ -147,10 +147,29 @@ class PurchaseProcessor:
                     'details': verification.get('error')
                 }
             data = verification['data']
+            print(data,"---=-===")
+            payment_state = data.get('paymentState', 0)
+            auto_renewing = data.get('autoRenewing', False)
+            price_mode = data.get('priceCurrencyCode', 'USD')
+            price =  data.get('priceAmountMicros', 0) # Convert micros to standard currency unit
             # Create or update subscription record in InAppPurchase
-            try:
-                print(type(user_id),token,product_id,"========================")
 
+            if payment_state == 0:
+                # Payment pending - don't activate yet!
+                status = 'pending'
+                is_subscribed = False
+            
+            elif payment_state == 1:
+                # Payment received - activate subscription!
+                status = 'completed'
+                is_subscribed = True
+            
+            else:
+                # Free trial - activate subscription
+                status = 'pending'
+                is_subscribed = False
+
+            try:
                 purchase = InAppPurchase.objects.get(
                     user_id=user_id,
                     purchase_token=token
@@ -162,22 +181,28 @@ class PurchaseProcessor:
                     product_id=product_id,
                     purchase_token=token,
                     purchase_time=datetime.fromtimestamp(int(data.get('startTimeMillis', 0)) / 1000),
+                    purchase_price = price,
+                    purchase_currency = price_mode,
                     purchase_type='subscribed',
-                    status='completed',
+                    status=status,
                     verified=True
                 )
                 print("Created new purchase record for subscription:", purchase)
             # Update with subscription details
-            purchase.is_subscribed = True
+            purchase.is_subscribed = is_subscribed
             purchase.subscription_id = product_id  # Store the subscription product ID
             purchase.expiry_time = datetime.fromtimestamp(int(data.get('expiryTimeMillis', 0)) / 1000)
-            purchase.auto_renewing = data.get('autoRenewing', False)
-            purchase.status = 'completed' if data.get('paymentState', 0) == 1 else 'pending'
+            purchase.auto_renewing = auto_renewing
+            purchase.status = status
             purchase.save()
             print("Updated purchase record:", purchase)
+            
             return {
                 'success': True,
                 'subscription': purchase,
+                'payment_state': payment_state,
+                'is_active': is_subscribed,
+                'status': status
             }
             
         except Exception as e:

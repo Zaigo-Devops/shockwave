@@ -87,6 +87,7 @@ def verify_and_activate_purchase(request):
                 # 'is_subscribed': subscription_result['subscription'].is_subscribed,
             }
 
+            print("Subscription status value:", status_value)
             if status_value == 'completed':
                 response_data['message'] = 'Subscription verified and activated successfully'
                 app_price = SubscriptionPrice.objects.get()
@@ -94,7 +95,8 @@ def verify_and_activate_purchase(request):
                 start_date = timezone.now()
                 end_date = start_date + timedelta(days=int(duration_days))
 
-                Subscription.objects.create(status=ACTIVE, 
+                print("Creating subscription for user:", user.id)
+                Subscription.objects.create(status=1,
                                             user_id=user.id,
                                             app_subscribed=True,
                                             is_subscribed=True,
@@ -103,6 +105,7 @@ def verify_and_activate_purchase(request):
                                             end_date=end_date,
                                             price=app_price.price
                                             )
+                print("Subscription created for user:", user.id)
                 return Response(response_data, status=status.HTTP_200_OK)
             
             elif status_value == 'trial':

@@ -100,11 +100,9 @@ def verify_and_activate_purchase(request):
                 Subscription.objects.create(status=1,
                                             user_id=user,
                                             app_subscribed=True,
-                                            is_subscribed=True,
-                                            duration=duration_days,
                                             start_date=start_date,
                                             end_date=end_date,
-                                            price=app_price.price
+                                            subscription_price=app_price.price
                                             )
                 print("Subscription created for user:", user.id)
                 return Response(response_data, status=status.HTTP_200_OK)

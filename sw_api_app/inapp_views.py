@@ -52,7 +52,7 @@ def verify_and_activate_purchase(request):
     try:
         with transaction.atomic():
             print("comes in s")
-            user_id=serializer.validated_data.get('user_id')
+            user_id = get_member_id(request)
 
             # Step 2: Purchase verified successfully, now activate subscription
             subscription_result = processor.process_subscription(

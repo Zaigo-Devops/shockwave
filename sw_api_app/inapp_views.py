@@ -53,6 +53,7 @@ def verify_and_activate_purchase(request):
         with transaction.atomic():
             print("comes in s")
             user_id = get_member_id(request)
+            print("User ID from token:", user_id)
 
             # Step 2: Purchase verified successfully, now activate subscription
             subscription_result = processor.process_subscription(
@@ -63,6 +64,7 @@ def verify_and_activate_purchase(request):
             )
     
             user = User.objects.filter(id=user_id).first()
+            print("User fetched:", user.id)
             if not user:
                 return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -95,9 +97,8 @@ def verify_and_activate_purchase(request):
                 start_date = timezone.now()
                 end_date = start_date + timedelta(days=int(duration_days))
 
-                print("Creating subscription for user:", user.id)
                 Subscription.objects.create(status=1,
-                                            user_id=user.id,
+                                            user_id=user,
                                             app_subscribed=True,
                                             is_subscribed=True,
                                             duration=duration_days,

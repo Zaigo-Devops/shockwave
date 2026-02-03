@@ -98,7 +98,7 @@ def verify_and_activate_purchase(request):
                 end_date = start_date + timedelta(days=int(duration_days))
 
                 Subscription.objects.create(status=1,
-                                            user_id=user,
+                                            user_id=user.id,
                                             app_subscribed=True,
                                             is_subscribed=True,
                                             duration=duration_days,

@@ -2,6 +2,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from sw_admin_app.models import Subscription, SubscriptionPrice
 from .serializers import (
     PurchaseVerificationSerializer,
     PurchaseSerializer,
@@ -9,6 +11,12 @@ from .serializers import (
 from .service import PurchaseProcessor
 from .models import InAppPurchase
 from django.db import transaction
+from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
+    get_recuring_periods, \
+    unix_timestamp_format, INACTIVE, get_address, ACTIVE
+from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
 
 
 @api_view(['POST'])
@@ -44,13 +52,19 @@ def verify_and_activate_purchase(request):
     try:
         with transaction.atomic():
             print("comes in s")
+            user_id=serializer.validated_data.get('user_id')
+
             # Step 2: Purchase verified successfully, now activate subscription
             subscription_result = processor.process_subscription(
                 token=serializer.validated_data['token'],
                 platform=serializer.validated_data['platform'],
                 product_id=serializer.validated_data['product_id'],
-                user_id=serializer.validated_data.get('user_id')
+                user_id=user_id
             )
+    
+            user = User.objects.filter(id=user_id).first()
+            if not user:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
             if not subscription_result['success']:
                 # Purchase was created but subscription failed
@@ -75,16 +89,30 @@ def verify_and_activate_purchase(request):
 
             if status_value == 'completed':
                 response_data['message'] = 'Subscription verified and activated successfully'
-                return Response(response_data, status=status.HTTP_201_CREATED)
+                app_price = SubscriptionPrice.objects.get()
+                duration_days = '30'
+                start_date = timezone.now()
+                end_date = start_date + timedelta(days=int(duration_days))
+
+                Subscription.objects.create(status=ACTIVE, 
+                                            user_id=user.id,
+                                            app_subscribed=True,
+                                            is_subscribed=True,
+                                            duration=duration_days,
+                                            start_date=start_date,
+                                            end_date=end_date,
+                                            price=app_price.price
+                                            )
+                return Response(response_data, status=status.HTTP_200_CREATED)
             
             elif status_value == 'trial':
                 # Free trial active
                 response_data['message'] = 'Free trial activated successfully'
-                return Response(response_data, status=status.HTTP_201_CREATED)
+                return Response(response_data, status=status.HTTP_200_CREATED)
             
             elif status_value == 'pending':
                 response_data['message'] = 'Subscription created but payment is pending'
-                return Response(response_data, status=status.HTTP_202_ACCEPTED)
+                return Response(response_data, status=status.HTTP_201_ACCEPTED)
             else:
                 response_data['message'] = 'Subscription created but status is unknown'
                 return Response(response_data, status=status.HTTP_400_BAD_REQUEST)

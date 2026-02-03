@@ -103,16 +103,16 @@ def verify_and_activate_purchase(request):
                                             end_date=end_date,
                                             price=app_price.price
                                             )
-                return Response(response_data, status=status.HTTP_200_CREATED)
+                return Response(response_data, status=status.HTTP_200_OK)
             
             elif status_value == 'trial':
                 # Free trial active
                 response_data['message'] = 'Free trial activated successfully'
-                return Response(response_data, status=status.HTTP_200_CREATED)
+                return Response(response_data, status=status.HTTP_200_OK)
             
             elif status_value == 'pending':
                 response_data['message'] = 'Subscription created but payment is pending'
-                return Response(response_data, status=status.HTTP_201_ACCEPTED)
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
             else:
                 response_data['message'] = 'Subscription created but status is unknown'
                 return Response(response_data, status=status.HTTP_400_BAD_REQUEST)

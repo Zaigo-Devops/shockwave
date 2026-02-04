@@ -136,15 +136,12 @@ def verify_and_activate_purchase(request):
 @permission_classes([AllowAny])
 def google_play_webhook(request):
     """Handle Google Play notifications"""
-    print("Google Play webhook received")
     try:
         body = json.loads(request.body)
-        print("Webhook body:", body)
         message_data = body['message']['data']
-        print(message_data,"==========+++++++++++++++++")
         decoded = base64.b64decode(message_data).decode('utf-8')
         notification = json.loads(decoded)
-        print("Received Google Play webhook notification:", notification)
+
         # Handle subscription notification
         if 'subscriptionNotification' in notification:
             sub_notif = notification['subscriptionNotification']
@@ -152,7 +149,6 @@ def google_play_webhook(request):
             purchase_token = sub_notif['purchaseToken']
             subscription_id = sub_notif['subscriptionId']
             
-            print(f"Processing subscription notification: type={notification_type}, token={purchase_token}, subscription_id={subscription_id}")
             # Find subscription in database
             purchase = InAppPurchase.objects.get(
                 purchase_token=purchase_token,
@@ -165,17 +161,21 @@ def google_play_webhook(request):
                 purchase.is_subscribed = False
                 purchase.auto_renewing = False
                 purchase.save()
+
+                subscription = Subscription.objects.filter(user_id=purchase.user_id, app_subscribed=True).first()
+                if subscription:
+                    subscription.status = 2  # Cancelled
+                    subscription.app_subscribed = False
+                    subscription.save()
             
             # Type 13 = SUBSCRIPTION_EXPIRED
             elif notification_type == 13:
-                print(f"⏰ Subscription expired: {purchase.id}")
                 purchase.status = 'expired'
                 purchase.is_subscribed = False
                 purchase.save()
             
             # Type 2 = SUBSCRIPTION_RENEWED
             elif notification_type == 2:
-                print(f"✅ Subscription renewed: {purchase.id}")
                 # Re-verify to get new expiry time
                 processor = PurchaseProcessor()
                 processor.process_subscription(

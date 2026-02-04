@@ -149,7 +149,6 @@ def google_play_webhook(request):
             purchase_token = sub_notif['purchaseToken']
             subscription_id = sub_notif['subscriptionId']
             
-            # Find subscription in database
             purchase = InAppPurchase.objects.get(
                 purchase_token=purchase_token,
                 subscription_id=subscription_id
@@ -162,11 +161,14 @@ def google_play_webhook(request):
                 purchase.auto_renewing = False
                 purchase.save()
 
-                subscription = Subscription.objects.filter(user_id=purchase.user_id, app_subscribed=True).first()
+                subscription = Subscription.objects.filter(user_id=purchase.user_id, ).first()
+
                 if subscription:
-                    subscription.status = 2  # Cancelled
-                    subscription.app_subscribed = False
-                    subscription.save()
+                    subscription.delete()
+                # if subscription:
+                #     subscription.status = 2  # Cancelled
+                #     subscription.app_subscribed = False
+                #     subscription.save()
             
             # Type 13 = SUBSCRIPTION_EXPIRED
             elif notification_type == 13:

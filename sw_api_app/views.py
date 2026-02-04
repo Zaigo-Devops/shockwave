@@ -607,7 +607,7 @@ def cancel_registration(request):
                             subscription.app_subscribed = False
                             subscription.save()
                             
-                            in_app.status = 'cancelled_by_developer'
+                            in_app.status ="cancelled"
                             in_app.is_subscribed = False
                             in_app.auto_renewing = False
                             in_app.save()

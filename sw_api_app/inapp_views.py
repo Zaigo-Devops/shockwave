@@ -1,3 +1,4 @@
+import uuid
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -87,13 +88,14 @@ def verify_and_activate_purchase(request):
             # Step 3: Both purchase and subscription successful
             purchase_serializer = PurchaseSerializer(subscription_result['subscription'])
 
+            in_app_id = purchase_serializer.data.get('id')
             response_data = {
                 'success': True,
                 'data': purchase_serializer.data,
                 # 'is_subscribed': subscription_result['subscription'].is_subscribed,
             }
 
-            print("Subscription status value:", status_value)
+
             if status_value == 'completed':
                 response_data['message'] = 'Subscription verified and activated successfully'
                 app_price = SubscriptionPrice.objects.get()
@@ -103,12 +105,12 @@ def verify_and_activate_purchase(request):
 
                 Subscription.objects.create(status=1,
                                             user_id=user,
+                                            in_app_purchase_id=in_app_id,
                                             app_subscribed=True,
                                             start_date=start_date,
                                             end_date=end_date,
                                             subscription_price=app_price.price
                                             )
-                print("Subscription created for user:", user.id)
                 return Response(response_data, status=status.HTTP_200_OK)
             
             elif status_value == 'trial':
@@ -161,14 +163,12 @@ def google_play_webhook(request):
                 purchase.auto_renewing = False
                 purchase.save()
 
-                subscription = Subscription.objects.filter(user_id=purchase.user_id, ).first()
+                subscription = Subscription.objects.filter(user_id_id=purchase.user_id.pk).first()
 
                 if subscription:
-                    subscription.delete()
-                # if subscription:
-                #     subscription.status = 2  # Cancelled
-                #     subscription.app_subscribed = False
-                #     subscription.save()
+                    subscription.status = 2  # Cancelled
+                    subscription.app_subscribed = False
+                    subscription.save()
             
             # Type 13 = SUBSCRIPTION_EXPIRED
             elif notification_type == 13:

@@ -3,7 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 from sw_admin_app.utils import get_expire_time
-
+from sw_api_app.models import InAppPurchase
 
 # Create your models here.
 
@@ -76,6 +76,8 @@ class PaymentMethod(models.Model):
 class Subscription(models.Model):
     status = models.PositiveIntegerField(choices=((0, "InActive"), (1, "Active"), (2, "Cancelled")), default=0)
     device_id = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True)  # Not used.
+    in_app_purchase = models.ForeignKey(InAppPurchase, on_delete=models.SET_NULL, null=True, default=None,
+                                        blank=True)  # ForeignKey to InAppPurchase model
     app_subscribed = models.BooleanField(default=False)  # Newly add for app subscription validation.
     user_id = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     payment_method_id = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True)
@@ -92,7 +94,7 @@ class Subscription(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        payments = self.stripe_intent_id
+        payments = self.stripe_intent_id or f"Subscription-{self.id}"
         return payments
 
 

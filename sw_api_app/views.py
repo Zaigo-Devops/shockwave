@@ -578,10 +578,20 @@ def cancel_registration(request):
             subscription = Subscription.objects.filter(user_id=user_id,
                                                        app_subscribed=True, status=1).first()
             if subscription:
-                delete_subscription(subscription.stripe_subscription_id)
-                subscription.status = 0
-                subscription.app_subscribed = False
-                subscription.save()
+                try:
+                    delete_subscription(subscription.stripe_subscription_id)
+                    subscription.status = 0
+                    subscription.app_subscribed = False
+                    subscription.save()
+                except Exception as e:
+                    in_app_purchase_id = subscription.in_app_purchase
+                    if in_app_purchase_id:
+                        subscription.status = 0
+                        subscription.app_subscribed = False
+                        subscription.save()
+
+                    return Response({'message': 'Unable to Cancel this subscription'}, status=status.HTTP_400_BAD_REQUEST)
+                
                 return Response({'message': 'Subscription Cancelled'}, status=status.HTTP_200_OK)
             else:
                 return Response({'message': 'No Subscription against user'}, status=status.HTTP_400_BAD_REQUEST)

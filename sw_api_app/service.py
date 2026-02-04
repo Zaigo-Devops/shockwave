@@ -90,6 +90,22 @@ class GooglePlayService:
         except Exception as e:
             return False
 
+    def cancel_subscription(self, subscription_id, token):
+        """
+        Cancel subscription - stops auto-renewal
+        User keeps access until current period ends
+        """
+        try:
+            self.service.purchases().subscriptions().cancel(
+                packageName=self.package_name,
+                subscriptionId=subscription_id,
+                token=token
+            ).execute()
+            
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+        
 
 class PurchaseProcessor:
     """Process and validate purchases"""

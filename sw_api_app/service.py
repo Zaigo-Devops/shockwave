@@ -4,7 +4,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from datetime import datetime
 import logging
-
+from django.contrib.auth.models import User
 from SHOCK_WAVE import settings
 
 
@@ -205,7 +205,9 @@ class PurchaseProcessor:
                 
             except InAppPurchase.DoesNotExist:
                 # If purchase doesn't exist, create it (shouldn't happen in normal flow)
+                user_id = User.objects.get(id=user_id)
                 purchase = InAppPurchase.objects.create(
+                    user_id = user_id,
                     product_id=product_id,
                     purchase_token=token,
                     purchase_time=datetime.fromtimestamp(int(data.get('startTimeMillis', 0)) / 1000),

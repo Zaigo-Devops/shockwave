@@ -260,13 +260,13 @@ def handle_renewal(new_token, subscription_id):
     """
 
     try:
-        # Find existing record by subscription_id (token has changed!)
-        purchase = InAppPurchase.objects.filter(
-            subscription_id=subscription_id
-        ).order_by('-created_at').first()
+        purchase = InAppPurchase.objects.get(
+                    purchase_token=new_token,
+                    subscription_id=subscription_id
+                ) 
 
         if not purchase:
-            return
+            return HttpResponse(status=400)  # No record found, nothing to update (could be a renewal before first purchase is processed)
 
         # Verify with NEW token to get updated data from Google
         play_service = GooglePlayService()

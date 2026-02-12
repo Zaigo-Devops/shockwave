@@ -151,13 +151,11 @@ def google_play_webhook(request):
                 handle_renewal(purchase_token, subscription_id)
                 return HttpResponse(status=200)
             
-            try:
-                purchase = InAppPurchase.objects.get(
-                    purchase_token=purchase_token,
-                    subscription_id=subscription_id
-                )
-            except InAppPurchase.DoesNotExist:
-                return HttpResponse(status=400)
+            purchase = InAppPurchase.objects.get(
+                purchase_token=purchase_token,
+                subscription_id=subscription_id
+            )   
+           
             
             # Type 3 = SUBSCRIPTION_CANCELED
             if notification_type == 3:

@@ -10,7 +10,7 @@ from .serializers import (
     PurchaseVerificationSerializer,
     PurchaseSerializer,
 )
-from .service import PurchaseProcessor
+from .service import PurchaseProcessor, handle_renewal
 from .models import InAppPurchase
 from django.db import transaction
 from .utils import get_member_id, get_paginated_response, generate_user_cards, get_attachment_from_name, \
@@ -43,9 +43,7 @@ def verify_and_activate_purchase(request):
         "user_id": "user_identifier"  # optional
     }
     """
-    print("api called")
     serializer = PurchaseVerificationSerializer(data=request.data)
-    print("Received data for purchase verification:", request.data)
     if not serializer.is_valid():
         return Response(
             {'error': 'Invalid data', 'details': serializer.errors},
@@ -53,12 +51,9 @@ def verify_and_activate_purchase(request):
         )
     
     processor = PurchaseProcessor()
-    print("Starting purchase processing...",processor)
     try:
         with transaction.atomic():
-            print("comes in s")
             user_id = get_member_id(request)
-            print("User ID from token:", user_id)
 
             # Step 2: Purchase verified successfully, now activate subscription
             subscription_result = processor.process_subscription(
@@ -69,7 +64,7 @@ def verify_and_activate_purchase(request):
             )
     
             user = User.objects.get(pk=user_id)
-            print("User fetched:", user.id)
+
             if not user:
                 return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -151,10 +146,18 @@ def google_play_webhook(request):
             purchase_token = sub_notif['purchaseToken']
             subscription_id = sub_notif['subscriptionId']
             
-            purchase = InAppPurchase.objects.get(
-                purchase_token=purchase_token,
-                subscription_id=subscription_id
-            )
+
+            if notification_type == 2:  # SUBSCRIPTION_RENEWED
+                handle_renewal(purchase_token, subscription_id)
+                return HttpResponse(status=200)
+            
+            try:
+                purchase = InAppPurchase.objects.get(
+                    purchase_token=purchase_token,
+                    subscription_id=subscription_id
+                )
+            except InAppPurchase.DoesNotExist:
+                return HttpResponse(status=400)
             
             # Type 3 = SUBSCRIPTION_CANCELED
             if notification_type == 3:
@@ -175,17 +178,17 @@ def google_play_webhook(request):
                 purchase.status = 'expired'
                 purchase.is_subscribed = False
                 purchase.save()
-            
-            # Type 2 = SUBSCRIPTION_RENEWED
-            elif notification_type == 2:
-                # Re-verify to get new expiry time
-                processor = PurchaseProcessor()
-                processor.process_subscription(
-                    token=purchase_token,
-                    platform='android',
-                    product_id=subscription_id,
-                    user_id=purchase.user_id
-                )
+
+                subscription = Subscription.objects.filter(
+                    user_id_id=purchase.user_id.pk
+                ).first()
+                if subscription:
+                    subscription.status = 0
+                    subscription.app_subscribed = False
+                    subscription.save()
+
+            else:
+                print(f"Unhandled notification type: {notification_type}")
         
         return HttpResponse(status=200)
     

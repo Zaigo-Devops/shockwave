@@ -1,11 +1,14 @@
 import json
 
+from django.http import HttpResponse
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import logging
 from django.contrib.auth.models import User
 from SHOCK_WAVE import settings
+from sw_admin_app.models import Subscription
+from sw_api_app.models import InAppPurchase
 
 
 
@@ -175,7 +178,7 @@ class PurchaseProcessor:
                     'details': verification.get('error')
                 }
             data = verification['data']
-            print(data,"---=-===")
+
             payment_state = data.get('paymentState', 0)
             auto_renewing = data.get('autoRenewing', False)
             price_mode = data.get('priceCurrencyCode', 'USD')
@@ -217,7 +220,6 @@ class PurchaseProcessor:
                     status=status,
                     verified=True
                 )
-                print("Created new purchase record for subscription:", purchase)
             # Update with subscription details
             purchase.is_subscribed = is_subscribed
             purchase.subscription_id = product_id  # Store the subscription product ID
@@ -225,11 +227,11 @@ class PurchaseProcessor:
             purchase.auto_renewing = auto_renewing
             purchase.status = status
             purchase.save()
-            print("Updated purchase record:", purchase)
             
             if data.get('acknowledgementState', 0) == 0 and payment_state == 1:
                 self.play_service.acknowledge_subscription(product_id, token)
 
+            
             return {
                 'success': True,
                 'subscription': purchase,
@@ -244,3 +246,86 @@ class PurchaseProcessor:
                 'error': 'Failed to process subscription',
                 'details': str(e)
             }
+
+
+
+def handle_renewal(new_token, subscription_id):
+    """
+    Handle subscription renewal.
+
+    ⚠️ Google issues a NEW token on every renewal, so we:
+    1. Find the existing record by subscription_id (NOT by token)
+    2. Verify with NEW token to get updated expiry time
+    3. Update the existing record (don't create a new one!)
+    """
+
+    try:
+        # Find existing record by subscription_id (token has changed!)
+        purchase = InAppPurchase.objects.filter(
+            subscription_id=subscription_id
+        ).order_by('-created_at').first()
+
+        if not purchase:
+            return
+
+        # Verify with NEW token to get updated data from Google
+        play_service = GooglePlayService()
+        verification = play_service.verify_subscription(
+            product_id=subscription_id,
+            token=new_token
+        )
+
+        if not verification['valid']:
+            return
+
+        data = verification['data']
+        payment_state = data.get('paymentState', 0)
+
+        if payment_state != 1:
+            return
+
+        purchase.purchase_token = new_token 
+        purchase.expiry_time = datetime.fromtimestamp(
+            int(data.get('expiryTimeMillis', 0)) / 1000
+        )
+        purchase.auto_renewing = data.get('autoRenewing', True)
+        purchase.status = 'completed'
+        purchase.is_subscribed = True
+        purchase.save()
+        
+        extend_subscription_date(purchase.user_id, duration_days=30)
+
+
+    except Exception as e:
+        print(f"Renewal handling failed: {str(e)}")
+        return HttpResponse(status=400)
+
+
+def extend_subscription_date(user, duration_days=30):
+    """
+    Extend subscription end_date by duration_days.
+
+    IMPORTANT: Always extend from end_date (not from now!)
+    This ensures user never loses days they already paid for.
+
+    """
+    subscription = Subscription.objects.filter(user_id=user,app_subscribed=True).first()
+
+    if not subscription:
+        print(f" No active subscription found for user: {user.pk}")
+        return
+
+    now = timezone.now()
+
+    if subscription.end_date and subscription.end_date > now:
+        new_end_date = subscription.end_date + timedelta(days=duration_days)
+    else:
+        new_end_date = now + timedelta(days=duration_days)
+
+    subscription.end_date = new_end_date
+    subscription.status = 1
+    subscription.app_subscribed = True
+    subscription.save()
+
+
+    return ""

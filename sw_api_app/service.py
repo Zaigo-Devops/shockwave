@@ -267,7 +267,7 @@ def handle_renewal(new_token, subscription_id):
                     purchase_token=new_token,
                     subscription_id=subscription_id
                 ) 
-        print(purchase)
+        print(purchase.purchase_token)
 
         if not purchase:
             return HttpResponse(status=400)  # No record found, nothing to update (could be a renewal before first purchase is processed)
@@ -275,7 +275,7 @@ def handle_renewal(new_token, subscription_id):
         # Verify with NEW token to get updated data from Google
         play_service = GooglePlayService()
         verification = play_service.verify_subscription(
-            product_id=subscription_id,
+            subscription_id=subscription_id,
             token=new_token
         )
         print(f"Google verification for renewal: {verification}")  # Debug log to inspect verification result

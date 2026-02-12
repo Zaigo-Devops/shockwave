@@ -24,6 +24,7 @@ class InAppPurchase(models.Model):
     purchase_type = models.CharField(max_length=20, choices=PURCHASE_TYPES,default='pending')
     product_id = models.CharField(max_length=255,blank=True, null=True,default=None)# subscription or product identifier
     purchase_token = models.TextField(max_length=255,blank=True, null=True,default=None)
+    order_id = models.CharField(max_length=255, blank=True, null=True, default=None)
     # Purchase details
     purchase_time = models.DateTimeField()
     purchase_price = models.FloatField(default=0, null=True)

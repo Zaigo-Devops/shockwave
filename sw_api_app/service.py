@@ -50,13 +50,13 @@ class GooglePlayService:
                 'error': str(e)
             }
     
-    def verify_subscription(self, subscription_id, purchase_token):
+    def verify_subscription(self, subscription_id, token):
         """Verify subscription purchase"""
         try:
             result = self.service.purchases().subscriptions().get(
                 packageName=self.package_name,
                 subscriptionId=subscription_id,
-                token=purchase_token
+                token=token
             ).execute()
             
             return {
@@ -184,6 +184,7 @@ class PurchaseProcessor:
             auto_renewing = data.get('autoRenewing', False)
             price_mode = data.get('priceCurrencyCode', 'USD')
             price =  data.get('priceAmountMicros', 0) # Convert micros to standard currency unit
+            order_id = data.get('orderId', None)
             # Create or update subscription record in InAppPurchase
 
             if payment_state == 0:
@@ -224,6 +225,7 @@ class PurchaseProcessor:
             # Update with subscription details
             purchase.is_subscribed = is_subscribed
             purchase.subscription_id = product_id  # Store the subscription product ID
+            purchase.order_id = order_id
             purchase.expiry_time = datetime.fromtimestamp(int(data.get('expiryTimeMillis', 0)) / 1000)
             purchase.auto_renewing = auto_renewing
             purchase.status = status
@@ -265,7 +267,6 @@ def handle_renewal(new_token, subscription_id):
     try:
         purchase = InAppPurchase.objects.get(
                     purchase_token=new_token,
-                    subscription_id=subscription_id
                 ) 
         print(purchase.purchase_token)
 

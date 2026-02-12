@@ -139,6 +139,7 @@ def google_play_webhook(request):
         decoded = base64.b64decode(message_data).decode('utf-8')
         notification = json.loads(decoded)
 
+        print(f"Received Google Play notification: {notification}")  # Debug log to inspect the notification structure
         # Handle subscription notification
         if 'subscriptionNotification' in notification:
             sub_notif = notification['subscriptionNotification']
@@ -148,7 +149,9 @@ def google_play_webhook(request):
             
 
             if notification_type == 2:  # SUBSCRIPTION_RENEWED
+                print("inside renewal")
                 handle_renewal(purchase_token, subscription_id)
+                print(f"Handled renewal for subscription_id: {subscription_id}, purchase_token: {purchase_token[:20]}...")  # Debug log to confirm renewal handling
                 return HttpResponse(status=200)
             
             purchase = InAppPurchase.objects.get(
@@ -159,6 +162,7 @@ def google_play_webhook(request):
             
             # Type 3 = SUBSCRIPTION_CANCELED
             if notification_type == 3:
+                print(f"Handling cancellation for purchase_token: {purchase_token}, subscription_id: {subscription_id}")  # Debug log to inspect inputs
                 purchase.status = 'cancelled_by_user'
                 purchase.is_subscribed = False
                 purchase.auto_renewing = False
@@ -170,7 +174,7 @@ def google_play_webhook(request):
                     subscription.status = 2  # Cancelled
                     subscription.app_subscribed = False
                     subscription.save()
-            
+                print(f"Subscription cancelled for user_id: {purchase.user_id.pk}")  # Debug log to confirm cancellation handling
             # Type 13 = SUBSCRIPTION_EXPIRED
             elif notification_type == 13:
                 purchase.status = 'expired'

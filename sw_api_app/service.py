@@ -260,11 +260,14 @@ def handle_renewal(new_token, subscription_id):
     3. Update the existing record (don't create a new one!)
     """
 
+    print("come in hDNLE")
+    print(f"Handling renewal for subscription_id: {subscription_id}, new_token: {new_token[:20]}...")  # Debug log to inspect inputs
     try:
         purchase = InAppPurchase.objects.get(
                     purchase_token=new_token,
                     subscription_id=subscription_id
                 ) 
+        print(purchase)
 
         if not purchase:
             return HttpResponse(status=400)  # No record found, nothing to update (could be a renewal before first purchase is processed)
@@ -275,11 +278,12 @@ def handle_renewal(new_token, subscription_id):
             product_id=subscription_id,
             token=new_token
         )
-
+        print(f"Google verification for renewal: {verification}")  # Debug log to inspect verification result
         if not verification['valid']:
             return
 
         data = verification['data']
+        print(f"Google verification data for renewal: {data}")  # Debug log to inspect the data structure
         payment_state = data.get('paymentState', 0)
 
         if payment_state != 1:
@@ -310,6 +314,7 @@ def extend_subscription_date(user, duration_days=30):
     This ensures user never loses days they already paid for.
 
     """
+    print(f"Extending subscription for user: {user.pk} by {duration_days} days")  # Debug log to inspect inputs
     subscription = Subscription.objects.filter(user_id=user,app_subscribed=True).first()
 
     if not subscription:

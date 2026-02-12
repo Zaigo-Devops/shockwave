@@ -169,7 +169,7 @@ def google_play_webhook(request):
                 purchase.save()
 
                 subscription = Subscription.objects.filter(user_id_id=purchase.user_id.pk).first()
-
+                print(f"Found subscription for cancellation: {subscription}, {subscription.id}, {subscription.status}")  # Debug log to confirm subscription retrieval
                 if subscription:
                     subscription.status = 2  # Cancelled
                     subscription.app_subscribed = False
@@ -184,6 +184,8 @@ def google_play_webhook(request):
                 subscription = Subscription.objects.filter(
                     user_id_id=purchase.user_id.pk
                 ).first()
+                print(f"Found subscription for cancellation: {subscription}, {subscription.id}, {subscription.status}")  # Debug log to confirm subscription retrieval
+
                 if subscription:
                     subscription.status = 0
                     subscription.app_subscribed = False

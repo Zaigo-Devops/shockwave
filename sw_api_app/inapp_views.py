@@ -190,6 +190,20 @@ def google_play_webhook(request):
                     subscription.status = 0
                     subscription.app_subscribed = False
                     subscription.save()
+            
+            elif notification_type == 5:
+                purchase.status = 'on_hold'
+                purchase.is_subscribed = False
+                purchase.save()
+
+                subscription = Subscription.objects.filter(
+                    user_id_id=purchase.user_id.pk
+                ).first()
+
+                if subscription:
+                    subscription.status = 0
+                    subscription.app_subscribed = False
+                    subscription.save()
 
             else:
                 print(f"Unhandled notification type: {notification_type}")

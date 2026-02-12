@@ -3,7 +3,8 @@ import json
 from django.http import HttpResponse
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from django.utils import timezone
 import logging
 from django.contrib.auth.models import User
 from SHOCK_WAVE import settings

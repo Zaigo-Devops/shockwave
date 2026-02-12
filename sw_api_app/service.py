@@ -179,6 +179,7 @@ class PurchaseProcessor:
                 }
             data = verification['data']
 
+            print(f"Google verification data: {data}")  # Debug log to inspect the data structure
             payment_state = data.get('paymentState', 0)
             auto_renewing = data.get('autoRenewing', False)
             price_mode = data.get('priceCurrencyCode', 'USD')

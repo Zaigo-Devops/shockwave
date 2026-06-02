@@ -182,7 +182,6 @@ class PurchaseSerializer(serializers.ModelSerializer):
             'verified',
             'expiry_time',
             'auto_renewing',
-            'is_active',
             'created_at',
             'updated_at'
         ]

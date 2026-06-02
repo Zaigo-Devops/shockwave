@@ -45,4 +45,5 @@ urlpatterns = [
     path('subscription_intent/', views.subscription_payment_intent),
     path('activate_subscription/', views.activate_subscription),
     path('verify-google-purchase', inapp_views.verify_and_activate_purchase),
+    path('webhook/google-play/', inapp_views.google_play_webhook),
 ]

@@ -14,6 +14,8 @@ from ecdsa import SigningKey, NIST256p
 from SHOCK_WAVE import settings
 from sw_admin_app.models import Subscription, UserOtp, BillingAddress, Device, Session, SessionData, PaymentMethod, \
     UserProfile, SubscriptionPeriod, SubscriptionPrice, UserDevice
+from sw_api_app.models import InAppPurchase
+from sw_api_app.service import GooglePlayService
 from .serializers import UserSerializer, RegisterSerializer, UserProfileSerializer, UserDetailSerializer, \
     BillingAddressSerializer, DeviceSerializer, SubscriptionSerializer
 from .stripe import delete_subscription, create_payment_customer, create_payment_method, attach_payment_method, \
@@ -578,10 +580,43 @@ def cancel_registration(request):
             subscription = Subscription.objects.filter(user_id=user_id,
                                                        app_subscribed=True, status=1).first()
             if subscription:
-                delete_subscription(subscription.stripe_subscription_id)
-                subscription.status = 0
-                subscription.app_subscribed = False
-                subscription.save()
+                if subscription.stripe_subscription_id :
+                    try:
+                        delete_subscription(subscription.stripe_subscription_id)
+                        subscription.status = 0
+                        subscription.app_subscribed = False
+                        subscription.save()
+                    except Exception as e:
+                        return Response({'message': 'Unable to Cancel this subscription'}, status=status.HTTP_400_BAD_REQUEST)
+                    
+                elif subscription.in_app_purchase:
+
+                    try:
+                        in_app = InAppPurchase.objects.get(id=subscription.in_app_purchase)
+                        
+                        # Cancel via Google Play API
+                        play_service = GooglePlayService()
+                        result = play_service.cancel_subscription(
+                            subscription_id=in_app.subscription_id,  # or product_id
+                            token=in_app.purchase_token
+                        )
+                        
+                        if result['success']:
+                            # Update both models
+                            subscription.status = 0
+                            subscription.app_subscribed = False
+                            subscription.save()
+                            
+                            in_app.status ="cancelled"
+                            in_app.is_subscribed = False
+                            in_app.auto_renewing = False
+                            in_app.save()
+                            print("✅ Google play subscription cancelled")
+                            
+                    except Exception as e:
+                        print(f"Google Play cancellation error: {e}")
+                        return Response({'message': 'Unable to Cancel this subscription'}, status=status.HTTP_400_BAD_REQUEST)
+                
                 return Response({'message': 'Subscription Cancelled'}, status=status.HTTP_200_OK)
             else:
                 return Response({'message': 'No Subscription against user'}, status=status.HTTP_400_BAD_REQUEST)

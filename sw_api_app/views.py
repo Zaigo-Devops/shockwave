@@ -1868,7 +1868,9 @@ def subscription_payment_intent(request):
                             customer=stripe_customer_id,
                             items=[{"price": stripe_product_price_id}],
                             payment_behavior='default_incomplete',
-                            payment_settings={'save_default_payment_method': 'on_subscription'},
+                            payment_settings={'save_default_payment_method': 'on_subscription',
+                                               'payment_method_types': ['card']
+                                              },
                             expand=['latest_invoice.payment_intent'],
                             # coupon=user_card_details['coupon'],
                             metadata={

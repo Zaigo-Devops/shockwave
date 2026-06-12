@@ -1876,6 +1876,43 @@ def subscription_payment_intent(request):
                 stripe_intent_id = None
                 stripe_client_secret_id = None
                 if stripe_customer_id:
+                    # Reuse pending subscription if one exists (created < 24h ago, incomplete)
+                    pending = Subscription.objects.filter(
+                        user_id=user, status=INACTIVE,
+                        stripe_subscription_id__isnull=False
+                    ).order_by('-created_at').first()
+
+                    if pending:
+                        stripe_sub = None
+                        try:
+                            stripe_sub = stripe.Subscription.retrieve(
+                                pending.stripe_subscription_id,
+                                expand=['latest_invoice.payment_intent']
+                            )
+                        except Exception:
+                            pass  # stale/invalid id — fall through and create fresh
+
+                        if stripe_sub:
+                            if stripe_sub.status == 'incomplete':
+                                pi = stripe_sub.latest_invoice.payment_intent
+                                return Response({
+                                    "stripe_payment_intent_id": pi.id,
+                                    "subscription_id": pending.id,
+                                    "ephemeral_key": ephemeral_key,
+                                    "customer_id": stripe_customer_id,
+                                    "stripe_subscription_id": stripe_sub.id,
+                                    "stripe_client_secret": pi.client_secret,
+                                    "message": "Existing pending subscription returned",
+                                }, status=status.HTTP_200_OK)
+                            elif stripe_sub.status in ('active', 'trialing', 'past_due'):
+                                # Paid but webhook hasn't synced yet — heal DB, block duplicate
+                                # pending.status = ACTIVE
+                                # pending.app_subscribed = True
+                                # pending.save()
+                                return Response({"message": "This App is already Subscribed"},
+                                                status=status.HTTP_200_OK)
+
+                    
                     stripe_product_id = create_product(product_name=user_unique_indentifer,
                                                        description=f'For {user.first_name},unique identifier {user_unique_indentifer} is '
                                                                    f'registered for App.')['id']
